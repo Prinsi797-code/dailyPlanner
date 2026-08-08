@@ -30,7 +30,6 @@ export const NEW_TEMPLATES = [
   { id: 30, name: "Student Planner 📚",    type: "daily",    category: "Student" },
 ];
 
-// ── Color accents per category (for picker cards) ──────────
 export const CATEGORY_ACCENT: Record<string, string> = {
   "Kids & Family": "#FF6B9D",
   "Travel":        "#E07B39",

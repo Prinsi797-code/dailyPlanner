@@ -1,6 +1,33 @@
 import { ThemeStyle } from './SectionRenderer';
 
-export type FieldType = 'text' | 'textarea' | 'checklistLine' | 'hourGrid' | 'dayPicker' | 'iconRow' | 'habitGrid' | 'monthCalendar';
+export type FieldType =
+    | 'text'
+    | 'textarea'
+    | 'checklistLine'
+    | 'hourGrid'
+    | 'dayPicker'
+    | 'iconRow'
+    | 'habitGrid'
+    | 'monthCalendar'
+    | 'checklistGrid' 
+    | 'table'             
+    | 'checkboxRow'       
+    | 'labeledLines'      
+    | 'row'               
+    | 'checklistWithNotes'  
+    | 'sectionBanner'       
+    | 'checkboxInlineRow'   
+    | 'timePeriodBlock'
+    | 'brainBreak'
+    | 'colorGroupTable'
+    | 'skillTrackerBlock'
+    | 'monthGridTracker'
+    | 'group';             
+
+export type ChecklistBox = {
+    title: string;
+    count: number;
+};
 
 export type SectionConfig = {
     type: FieldType;
@@ -11,6 +38,23 @@ export type SectionConfig = {
     icons?: string[];
     startDay?: 'mon' | 'sun';
     decoration?: 'floral' | 'tropical' | 'minimal' | 'flamingo';
+    boxes?: ChecklistBox[];     // checklistGrid ke liye — har box apna title + line count
+    columns?: string[];         // table
+    rows?: number;              // table
+    caption?: string;           // table — table ke upar chhoti label line (e.g. "Opening Cash Balance:")
+    items?: string[];           // checkboxRow / checklistWithNotes / checkboxInlineRow
+    lines?: string[];           // labeledLines
+    notesLabel?: string;        // checklistWithNotes
+    children?: SectionConfig[]; // row (side-by-side) / group (stacked)
+    rowLabelTitle?: string;      // colorGroupTable — leftmost header (e.g. "Day")
+    rowLabelColor?: string;      // colorGroupTable — leftmost column color
+    rowLabels?: string[];        // colorGroupTable — fixed row labels (e.g. ['M','T','W','T','F','S','S'])
+    groupHeaders?: { label: string; span: number; color?: string }[]; // colorGroupTable — top grouped header row
+    colColumns?: { title: string; color?: string }[]; // colorGroupTable — per-column title + color
+    totalDays?: number;          // monthGridTracker — kitne din (default 31)
+    hoursCount?: number;         // monthGridTracker — kitne hour columns (default 12)
+    hideBullet?: boolean;
+    splitAt?: number;            
 };
 
 export type TemplateDesign = {
@@ -18,9 +62,9 @@ export type TemplateDesign = {
     headerColor: string;
     headerStyle: 'bold' | 'script' | 'handwritten';
     accentColor: string;
-    headerBg?: string;      
-    sheetBg?: string;        
-    themeStyle?: ThemeStyle; 
+    headerBg?: string;
+    sheetBg?: string;
+    themeStyle?: ThemeStyle;
     sections: SectionConfig[];
 };
 
@@ -45,8 +89,8 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         sections: [
             { type: 'dayPicker' },
             { type: 'checklistLine', title: 'Top Priorities', count: 3 },
-            { type: 'hourGrid', hours: ['5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM'] },
-            { type: 'checklistLine', title: 'To-Do List', count: 6 },
+            { type: 'hourGrid', hours: ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM'] },
+            { type: 'checklistLine', title: 'To-Do List', count: 5 },
             { type: 'textarea', title: 'Notes' },
         ],
     },
@@ -70,8 +114,7 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         },
         sections: [
             { type: 'textarea', title: 'Focus' },
-            { type: 'checklistLine', title: 'Tasks', count: 8 },
-            { type: 'checklistLine', title: 'Reminder', count: 8 },
+            { type: 'checklistLine', title: 'Tasks', count: 6 },
             { type: 'iconRow', title: 'Hydrate', icons: ['💧','💧','💧','💧','💧','💧','💧','💧'] },
         ],
     },
@@ -95,12 +138,9 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         },
         sections: [
             { type: 'dayPicker' },
-            { type: 'hourGrid', hours: ['5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM','12 AM'] },
-            { type: 'iconRow', title: 'Self-Care', icons: ['🛁','❤️','🦷'] },
-            { type: 'iconRow', title: 'Hydrate!', icons: ['🥤','🥤','🥤','🥤','🥤','🥤','🥤'] },
+            { type: 'hourGrid', hours: ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM'] },
             { type: 'checklistLine', title: 'Top 3 - Get These Done!', count: 3 },
             { type: 'checklistLine', title: 'Soon-ish', count: 3 },
-            { type: 'checklistLine', title: 'Later-ish', count: 3 },
         ],
     },
 
@@ -123,8 +163,7 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         },
         sections: [
             { type: 'textarea', title: "This Week's Main Focus" },
-            { type: 'textarea', title: 'Top Goals This Week' },
-            { type: 'checklistLine', title: 'To-Do List for the Week', count: 7 },
+            { type: 'checklistLine', title: 'To-Do List for the Week', count: 6 },
             { type: 'habitGrid', title: 'Habit Tracker' },
         ],
     },
@@ -190,10 +229,8 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
             inputUnderlineColor: '#E890B8',
         },
         sections: [
-            { type: 'hourGrid', hours: ['5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM','12 AM'] },
             { type: 'monthCalendar', startDay: 'sun', decoration: 'minimal' },
-            { type: 'checklistLine', title: 'To-Do', count: 6 },
-            { type: 'checklistLine', title: 'Priorities', count: 4 },
+            { type: 'checklistLine', title: 'To-Do', count: 5 },
             { type: 'textarea', title: 'Notes' },
         ],
     },
@@ -259,8 +296,7 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
             { type: 'dayPicker' },
             { type: 'iconRow', title: 'How Do I Feel Today? 😊', icons: ['😄','😊','😐','😢','😡','🤒'] },
             { type: 'checklistLine', title: '⭐ My 3 Goals Today', count: 3 },
-            { type: 'checklistLine', title: '📚 School Tasks', count: 5 },
-            { type: 'iconRow', title: '💧 Water & Snacks', icons: ['💧','💧','💧','💧','🍎','🍎','🍎'] },
+            { type: 'checklistLine', title: '📚 School Tasks', count: 4 },
             { type: 'textarea', title: '✏️ My Day in a Few Words' },
         ],
     },
@@ -284,11 +320,9 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         },
         sections: [
             { type: 'textarea', title: '📍 Picnic Spot & Date' },
-            { type: 'checklistLine', title: '🧺 Food & Drinks to Pack', count: 8 },
-            { type: 'checklistLine', title: '🎒 Things to Bring', count: 6 },
-            { type: 'checklistLine', title: '👥 Guests Invited', count: 5 },
+            { type: 'checklistLine', title: '🧺 Food & Drinks to Pack', count: 6 },
+            { type: 'checklistLine', title: '🎒 Things to Bring', count: 5 },
             { type: 'iconRow', title: '🌤️ Weather Check', icons: ['☀️','⛅','🌥️','🌧️'] },
-            { type: 'textarea', title: '🎶 Music & Activities Ideas' },
         ],
     },
 
@@ -311,11 +345,9 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         },
         sections: [
             { type: 'textarea', title: '🗺️ Destination & Trip Dates' },
-            { type: 'checklistLine', title: '🎯 Must-See Places', count: 6 },
-            { type: 'hourGrid', hours: ['6 AM','8 AM','10 AM','12 PM','2 PM','4 PM','6 PM','8 PM','10 PM'] },
-            { type: 'checklistLine', title: '🧳 Packing List', count: 10 },
+            { type: 'checklistLine', title: '🎯 Must-See Places', count: 5 },
+            { type: 'checklistLine', title: '🧳 Packing List', count: 7 },
             { type: 'iconRow', title: '✅ Pre-Trip Checklist', icons: ['🛂','🎫','💳','📱','🔋','🗺️'] },
-            { type: 'textarea', title: '💡 Trip Notes & Tips' },
         ],
     },
 
@@ -339,10 +371,8 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         sections: [
             { type: 'dayPicker' },
             { type: 'textarea', title: '💌 Today I Love You Because...' },
-            { type: 'checklistLine', title: '🌹 Date Ideas This Week', count: 5 },
-            { type: 'checklistLine', title: '💬 Things to Talk About', count: 4 },
+            { type: 'checklistLine', title: '🌹 Date Ideas This Week', count: 4 },
             { type: 'iconRow', title: '❤️ Love Meter', icons: ['❤️','❤️','❤️','❤️','❤️','❤️','❤️','❤️','❤️','❤️'] },
-            { type: 'textarea', title: '📝 Our Memories Today' },
         ],
     },
 
@@ -365,11 +395,9 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         },
         sections: [
             { type: 'dayPicker' },
-            { type: 'checklistLine', title: '🧹 Cleaning Tasks', count: 6 },
-            { type: 'checklistLine', title: '🛒 Grocery / Shopping List', count: 8 },
-            { type: 'checklistLine', title: '🔧 Fix & Repair List', count: 4 },
+            { type: 'checklistLine', title: '🧹 Cleaning Tasks', count: 5 },
+            { type: 'checklistLine', title: '🛒 Grocery / Shopping List', count: 6 },
             { type: 'iconRow', title: '🏡 Room Done Today', icons: ['🛋️','🍳','🛁','🛏️','🪟','🪴'] },
-            { type: 'textarea', title: '📋 Home Notes' },
         ],
     },
 
@@ -392,11 +420,9 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         },
         sections: [
             { type: 'dayPicker' },
-            { type: 'checklistLine', title: '🐠 Daily Tank Care', count: 5 },
+            { type: 'checklistLine', title: '🐠 Daily Tank Care', count: 4 },
             { type: 'iconRow', title: '🌡️ Water Check', icons: ['🌡️','💧','⚗️','🔬','🐟'] },
             { type: 'textarea', title: '📊 Water Parameters (pH, Temp, Nitrate)' },
-            { type: 'checklistLine', title: '🛒 Supplies to Buy', count: 4 },
-            { type: 'textarea', title: '🗒️ Observation Notes' },
         ],
     },
 
@@ -420,10 +446,8 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         sections: [
             { type: 'dayPicker' },
             { type: 'iconRow', title: "😺 Kitty's Mood Today", icons: ['😻','😸','😾','🙀','😴','🐱'] },
-            { type: 'checklistLine', title: '🐾 Daily Cat Care', count: 5 },
-            { type: 'iconRow', title: '🍽️ Meals & Treats', icons: ['🥣','🥣','🍗','🐟','🧃'] },
+            { type: 'checklistLine', title: '🐾 Daily Cat Care', count: 4 },
             { type: 'textarea', title: '📝 Vet Notes & Reminders' },
-            { type: 'checklistLine', title: '🛒 Cat Supplies Needed', count: 4 },
         ],
     },
 
@@ -446,11 +470,9 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         },
         sections: [
             { type: 'dayPicker' },
-            { type: 'hourGrid', hours: ['7 AM','12 PM','3 PM','6 PM','9 PM'] },
             { type: 'iconRow', title: "🐕 Doggo's Day", icons: ['🦮','🎾','🛁','💊','🍗','🐾'] },
-            { type: 'checklistLine', title: '🐾 Daily Dog Tasks', count: 6 },
+            { type: 'checklistLine', title: '🐾 Daily Dog Tasks', count: 5 },
             { type: 'textarea', title: '🏥 Vet / Health Notes' },
-            { type: 'checklistLine', title: '🛒 Dog Supplies List', count: 4 },
         ],
     },
 
@@ -474,9 +496,7 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         sections: [
             { type: 'dayPicker' },
             { type: 'textarea', title: '🕐 Shift Timing & Location' },
-            { type: 'hourGrid', hours: ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM'] },
-            { type: 'checklistLine', title: '📋 Tasks for This Shift', count: 6 },
-            { type: 'checklistLine', title: '⏰ Handover Notes', count: 4 },
+            { type: 'checklistLine', title: '📋 Tasks for This Shift', count: 5 },
             { type: 'iconRow', title: '✅ Shift Checklist', icons: ['🔑','📞','💻','📁','☕','🏁'] },
         ],
     },
@@ -502,8 +522,6 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         sections: [
             { type: 'dayPicker' },
             { type: 'iconRow', title: '🌈 My Mood', icons: ['😄','😊','😐','😔','😡','🥺','😰'] },
-            { type: 'textarea', title: '☀️ Morning Thoughts' },
-            { type: 'checklistLine', title: '🙏 Grateful For Today', count: 3 },
             { type: 'textarea', title: '✍️ Dear Diary...' },
             { type: 'textarea', title: '🌙 Evening Reflection' },
         ],
@@ -528,12 +546,721 @@ export const TEMPLATE_DESIGNS: Record<number, TemplateDesign> = {
         },
         sections: [
             { type: 'dayPicker' },
-            { type: 'checklistLine', title: '📖 Classes Today', count: 5 },
-            { type: 'hourGrid', hours: ['7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM'] },
-            { type: 'checklistLine', title: '📝 Assignments Due', count: 5 },
-            { type: 'checklistLine', title: '📌 Exam / Test Reminders', count: 3 },
+            { type: 'checklistLine', title: '📖 Classes Today', count: 4 },
+            { type: 'checklistLine', title: '📝 Assignments Due', count: 4 },
             { type: 'habitGrid', title: '📊 Study Habit Tracker' },
-            { type: 'textarea', title: '💡 Notes & Ideas' },
+        ],
+    },
+
+    // ── 31: Morning Check-In ☀️ — cream/yellow, 2-col boxed grid ──
+    31: {
+        layout: 'morning-checkin',
+        headerColor: '#1a1a1a',
+        headerBg: '#FFF9E0',
+        headerStyle: 'bold',
+        accentColor: '#F5A623',
+        sheetBg: '#FFF9E0',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#E8E2C8',
+            sectionBorderWidth: 1.5,
+            sectionBorderRadius: 14,
+            inputUnderlineColor: '#D8D0B0',
+        },
+        sections: [
+            { type: 'text', title: 'Date' },
+            {
+                type: 'checklistGrid',
+                boxes: [
+                    { title: 'How I’m Feeling', count: 5 },
+                    { title: 'Things to Look Forward to Today', count: 5 },
+                    { title: 'What I Would Love to Talk About', count: 5 },
+                    { title: "Today's Goals", count: 5 },
+                    { title: 'Things to Improve How I’m Feeling', count: 5 },
+                    { title: 'Things to Remember', count: 5 },
+                ],
+            },
+        ],
+    },
+
+    // ── 32: Reselling Planner 🛍️ — table + tracker layout ────────
+    32: {
+        layout: 'reselling-planner',
+        headerColor: '#111111',
+        headerBg: '#FFFFFF',
+        headerStyle: 'bold',
+        accentColor: '#2d2d2d',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#D8D8D8',
+            sectionBorderWidth: 1.2,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#B8B8B8',
+        },
+        sections: [
+            { type: 'text', title: 'Date' },
+            {
+                type: 'checkboxRow',
+                title: "Today's Goal",
+                items: ['Source Products', 'Create Listings', 'Pack Orders', 'Ship Orders', 'Update Inventory', 'Customer Messages'],
+            },
+            {
+                type: 'table',
+                title: 'Products To Resell',
+                columns: ['Item', 'Source', 'Cost', 'Selling Price', 'Expected Profit'],
+                rows: 3,
+            },
+            {
+                type: 'row',
+                children: [
+                    { type: 'table', title: 'Listing Tracker', columns: ['Platform', 'Status'], rows: 3 },
+                    { type: 'labeledLines', title: 'Sales Tracker', lines: ['Total Sales:', 'Total Expenses:', "Today's Profit:"] },
+                ],
+            },
+            {
+                type: 'row',
+                children: [
+                    { type: 'labeledLines', title: 'Order & Shipping', lines: ['Orders To Pack:', 'Orders Shipped:', 'Tracking Notes:'] },
+                    {
+                        type: 'checklistWithNotes',
+                        title: 'Customer Follow-Up',
+                        items: ['Reply To Messages', 'Send Updates', 'Request Reviews'],
+                        notesLabel: 'Notes',
+                    },
+                ],
+            },
+            { type: 'text', title: 'Best Selling Item' },
+            {
+                type: 'row',
+                children: [
+                    { type: 'textarea', title: 'What Worked Today?' },
+                    { type: 'textarea', title: 'What To Improve Tomorrow?' },
+                ],
+            },
+        ],
+    },
+
+    // ── 33: Cashier Planner 🧾 — shift + cash count form ──────────
+    33: {
+        layout: 'cashier-planner',
+        headerColor: '#111111',
+        headerBg: '#FFFFFF',
+        headerStyle: 'bold',
+        accentColor: '#7FA7CC',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#D8D8D8',
+            sectionBorderWidth: 1.2,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#B8B8B8',
+        },
+        sections: [
+            {
+                type: 'row',
+                children: [
+                    { type: 'text', title: 'Date:' },
+                    { type: 'text', title: 'Day:' },
+                ],
+            },
+            {
+                type: 'row',
+                children: [
+                    { type: 'text', title: 'Cashier Name:' },
+                    { type: 'text', title: 'Employee ID:' },
+                ],
+            },
+            { type: 'text', title: 'Store / Location:' },
+            { type: 'checkboxInlineRow', title: 'Shift:', items: ['Morning', 'Afternoon', 'Evening'] },
+            {
+                type: 'row',
+                children: [
+                    { type: 'text', title: 'Start Time:' },
+                    { type: 'text', title: 'End Time:' },
+                ],
+            },
+            { type: 'sectionBanner', title: 'Shift Overview' },
+            {
+                type: 'table',
+                caption: 'Opening Cash Balance:',
+                columns: ['Payment Type', 'Amount', 'Payment Type', 'Amount'],
+                rows: 3,
+            },
+            { type: 'sectionBanner', title: 'Cash Count' },
+            {
+                type: 'table',
+                caption: 'Cash In Drawer:',
+                columns: ['Denomination', 'Quantity', 'Total'],
+                rows: 2,
+            },
+            {
+                type: 'labeledLines',
+                lines: ['Expected Closing Balance', 'Actual Closing Balance', 'Difference (+ / -)'],
+            },
+            {
+                type: 'row',
+                children: [
+                    { type: 'checklistLine', title: 'Task Checklist', count: 6 },
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'textarea', title: 'Customer Service Notes' },
+                            { type: 'sectionBanner', title: 'Daily Summary' },
+                            { type: 'labeledLines', lines: ['Total Customers Served:'] },
+                            { type: 'textarea', title: 'Best Moment of the Shift' },
+                            { type: 'textarea', title: 'Challenges / Follow-Up' },
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+    // ── 34: Daily/Shift Planner 🕒 — time-blocking + priority layout ──
+    34: {
+        layout: 'daily-shift-planner',
+        headerColor: '#1a1a2e',
+        headerBg: '#FFFFFF',
+        headerStyle: 'bold',
+        accentColor: '#1B2A56',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#1B2A56',
+            sectionBorderWidth: 1.5,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#C8C8C8',
+        },
+        sections: [
+            {
+                type: 'row',
+                children: [
+                    { type: 'text', title: 'Date' },
+                    { type: 'text', title: 'Today I Choose To Be' },
+                ],
+            },
+            {
+                type: 'row',
+                children: [
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'text', title: 'What do I need to get done today?' },
+                            { type: 'checklistLine', title: "Today's Big Priority", count: 4 },
+                            { type: 'text', title: 'What am I thankful for today?' },
+                            { type: 'textarea', title: 'Notes / Doodles / Ideas' },
+                        ],
+                    },
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'sectionBanner', title: 'Time-Blocking' },
+                            { type: 'timePeriodBlock', title: 'MORNING', caption: 'Start the day off right.', icons: ['☀️'], hours: ['8:00 AM', '9:00 AM', '10:00 AM'] },
+                            { type: 'brainBreak', title: 'BRAIN BREAK', caption: '11:00 AM' },
+                            { type: 'timePeriodBlock', title: 'AFTERNOON', caption: 'Keep up the momentum!', icons: ['🌤️'], hours: ['12:00 PM', '1:00 PM', '2:00 PM'] },
+                            { type: 'brainBreak', title: 'BRAIN BREAK', caption: '3:00 PM' },
+                            { type: 'timePeriodBlock', title: 'EVENING', caption: 'Finish your day strong!', icons: ['🌙'], hours: ['4:00 PM', '5:00 PM', '6:00 PM'] },
+                            { type: 'brainBreak', title: 'BRAIN BREAK', caption: '7:00 PM' },
+                            { type: 'text', title: 'One win from today:' },
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+    35: {
+        layout: 'activity-report',
+        headerColor: '#3D2470',
+        headerBg: '#FFFFFF',
+        headerStyle: 'bold',
+        accentColor: '#3D2470',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#D8D8D8',
+            sectionBorderWidth: 1.2,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#B8B8B8',
+        },
+        sections: [
+            { type: 'text', title: 'Date:' },
+            { type: 'text', title: 'Employee:' },
+            { type: 'text', title: 'Department:' },
+            { type: 'sectionBanner', title: 'Completed Task', accentColor: '#4B2E83' },
+            { type: 'table', columns: ['Task Description', 'Time Spent (hrs)', 'Notes'], rows: 5 },
+            { type: 'sectionBanner', title: 'Ongoing Task', accentColor: '#1C7293' },
+            { type: 'table', columns: ['Task Description', 'Progress', 'Due Date'], rows: 5 },
+            { type: 'sectionBanner', title: 'Notes', accentColor: '#5C4813' },
+            { type: 'textarea' },
+        ],
+    },
+    37: {
+        layout: 'dbt-diary-card',
+        headerColor: '#1a1a1a',
+        headerBg: '#FFFFFF',
+        headerStyle: 'bold',
+        accentColor: '#9ECB9E',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#D8D8D8',
+            sectionBorderWidth: 1.2,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#B8B8B8',
+        },
+        sections: [
+            {
+                type: 'row',
+                children: [
+                    { type: 'text', title: 'Date Range:' },
+                    { type: 'text', title: 'Target Behavior:' },
+                ],
+            },
+            {
+                type: 'colorGroupTable',
+                rowLabelTitle: 'Day',
+                rowLabelColor: '#9ECB9E',
+                rowLabels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+                groupHeaders: [
+                    { label: 'Target Behaviour', span: 2, color: '#D6D6D6' },
+                    { label: 'Emotions (1-5)', span: 7, color: '#D6D6D6' },
+                ],
+                colColumns: [
+                    { title: 'Intensity (0-5)', color: '#E2E2E2' },
+                    { title: 'Action (Y/N)', color: '#E2E2E2' },
+                    { title: 'Fear', color: '#CBB8E8' },
+                    { title: 'Anger', color: '#E8A0A0' },
+                    { title: 'Sadness', color: '#E8C39B' },
+                    { title: 'Joy', color: '#F0D060' },
+                    { title: 'Shame', color: '#A8CC9A' },
+                    { title: 'Pain', color: '#9AB8D8' },
+                    { title: 'Other', color: '#B8BEDB' },
+                ],
+            },
+            { type: 'sectionBanner', title: 'Skills', accentColor: '#C7CCC7' },
+            {
+                type: 'row',
+                children: [
+                    { type: 'skillTrackerBlock', title: 'Mindfulness', accentColor: '#E8A0A0', count: 3 },
+                    { type: 'skillTrackerBlock', title: 'Emotion Regulation', accentColor: '#E8C39B', count: 3 },
+                ],
+            },
+            {
+                type: 'row',
+                children: [
+                    { type: 'skillTrackerBlock', title: 'Interpersonal Effectiveness', accentColor: '#F0D060', count: 3 },
+                    { type: 'skillTrackerBlock', title: 'Emotional Endurance', accentColor: '#A8CC9A', count: 3 },
+                ],
+            },
+            { type: 'sectionBanner', title: 'Notes', accentColor: '#C7CCC7' },
+            { type: 'textarea' },
+        ],
+    },
+     38: {
+        layout: 'spelling-bee-planner',
+        headerColor: '#1a1a1a',
+        headerBg: '#FBF6DC',
+        headerStyle: 'bold',
+        accentColor: '#E8B923',
+        sheetBg: '#FBF6DC',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#D8CFA0',
+            sectionBorderWidth: 1.2,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#C8BE90',
+        },
+        sections: [
+            {
+                type: 'row',
+                children: [
+                    { type: 'text', title: 'Name:' },
+                    { type: 'text', title: 'Week Of:' },
+                ],
+            },
+            {
+                type: 'colorGroupTable',
+                rowLabelTitle: 'Time',
+                rowLabelColor: '#E8B923',
+                rowLabels: ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'],
+                groupHeaders: [
+                    { label: 'Monday', span: 1, color: '#F5E6A8' },
+                    { label: 'Tuesday', span: 1, color: '#F5E6A8' },
+                    { label: 'Wednesday', span: 1, color: '#F5E6A8' },
+                    { label: 'Thursday', span: 1, color: '#F5E6A8' },
+                    { label: 'Friday', span: 1, color: '#F5E6A8' },
+                ],
+                colColumns: [
+                    { title: 'Assignment', color: '#FBF6DC' },
+                    { title: 'Activity', color: '#FBF6DC' },
+                    { title: 'Reading', color: '#FBF6DC' },
+                    { title: 'Revision', color: '#FBF6DC' },
+                    { title: 'Quiz', color: '#FBF6DC' },
+                ],
+            },
+        ],
+    },
+    39: {
+        layout: 'sleep-tracker',
+        headerColor: '#1a1a1a',
+        headerBg: '#FFFFFF',
+        headerStyle: 'bold',
+        accentColor: '#4A4A4A',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#D8D8D8',
+            sectionBorderWidth: 1,
+            sectionBorderRadius: 4,
+            inputUnderlineColor: '#B8B8B8',
+        },
+        sections: [
+            { type: 'text', title: 'Month:' },
+            { type: 'monthGridTracker', totalDays: 31, hoursCount: 12, splitAt: 16 },
+        ],
+    },
+    // ── 40: Rent Payment Ledger 🧾 — tenant/property form + monthly table ──
+    40: {
+        layout: 'rent-ledger',
+        headerColor: '#1a1a1a',
+        headerBg: '#FFFFFF',
+        headerStyle: 'bold',
+        accentColor: '#A9C6E8',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#D8D8D8',
+            sectionBorderWidth: 1.2,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#B8B8B8',
+        },
+        sections: [
+            { type: 'text', title: 'Year:' },
+            {
+                type: 'row',
+                children: [
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'sectionBanner', title: 'Tenant', accentColor: '#A9C6E8' },
+                            { type: 'text', title: 'Name:' },
+                            { type: 'text', title: 'Phone:' },
+                            { type: 'text', title: 'Monthly Rent:' },
+                        ],
+                    },
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'sectionBanner', title: 'Property', accentColor: '#A9C6E8' },
+                            { type: 'text', title: 'Address:' },
+                            { type: 'text' },
+                            { type: 'text' },
+                        ],
+                    },
+                ],
+            },
+            {
+                type: 'colorGroupTable',
+                rowLabelTitle: 'Month',
+                rowLabelColor: '#A9C6E8',
+                rowLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                colColumns: [
+                    { title: 'Due Date', color: '#B9D0EC' },
+                    { title: 'Rent Amount', color: '#B9D0EC' },
+                    { title: 'Amount Paid', color: '#B9D0EC' },
+                    { title: 'Fees', color: '#B9D0EC' },
+                    { title: 'Comment', color: '#B9D0EC' },
+                ],
+            },
+            { type: 'sectionBanner', title: 'Notes', accentColor: '#A9C6E8' },
+            { type: 'textarea' },
+        ],
+    },
+    41: {
+        layout: 'egg-count-planner',
+        headerColor: '#1a1a1a',
+        headerBg: '#FFFFFF',
+        headerStyle: 'bold',
+        accentColor: '#8FC9BE',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#D8D8D8',
+            sectionBorderWidth: 1.2,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#B8B8B8',
+        },
+        sections: [
+            {
+                type: 'row',
+                children: [
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'text', title: 'Month:' },
+                            {
+                                type: 'table',
+                                title: 'Monthly Expense Log',
+                                columns: ['Date', 'Expense', 'Amount'],
+                                rows: 10,
+                            },
+                            { type: 'textarea', title: 'Notes' },
+                            {
+                                type: 'labeledLines',
+                                title: 'Eggs — Total',
+                                lines: ['Gross Sales', 'Monthly Expenses', 'Net Profit'],
+                            },
+                        ],
+                    },
+                    {
+                        type: 'colorGroupTable',
+                        rowLabelTitle: '#',
+                        rowLabelColor: '#8FC9BE',
+                        rowLabels: [
+                            '1','2','3','4','5','6','7','8','9','10',
+                            '11','12','13','14','15','16','17','18','19','20',
+                            '21','22','23','24','25','26','27','28','29','30','31',
+                            'Total',
+                        ],
+                        colColumns: [{ title: 'Eggs', color: '#E4F5F1' }],
+                    },
+                ],
+            },
+        ],
+    },
+     42: {
+        layout: 'school-schedule-planner',
+        headerColor: '#FFFFFF',
+        headerBg: '#8d76aa',
+        headerStyle: 'bold',
+        accentColor: '#8d76aa',
+        sheetBg: '#8d76aa',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#EFEAFB',
+            sectionBorderColor: '#8d76aa',
+            sectionBorderWidth: 1,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#B8A8DC',
+        },
+        sections: [
+            {
+                type: 'row',
+                children: [
+                    { type: 'text', title: 'Name:' },
+                    { type: 'text', title: 'Grade:' },
+                    { type: 'text', title: 'Week Of:' },
+                ],
+            },
+            {
+                type: 'row',
+                children: [
+                    { type: 'text', title: 'School:' },
+                    { type: 'text', title: 'Semester:' },
+                ],
+            },
+            {
+                type: 'colorGroupTable',
+                rowLabelTitle: 'Time',
+                rowLabelColor: '#8d76aa',
+                rowLabels: ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM'],
+                colColumns: [
+                    { title: 'Monday', color: '#C9B8EC' },
+                    { title: 'Tuesday', color: '#C9B8EC' },
+                    { title: 'Wednesday', color: '#C9B8EC' },
+                    { title: 'Thursday', color: '#C9B8EC' },
+                    { title: 'Friday', color: '#C9B8EC' },
+                ],
+            },
+            { type: 'text', title: 'Notes:' },
+        ],
+    },
+    43: {
+        layout: 'group-study-planner',
+        headerColor: '#1a1a1a',
+        headerBg: '#FBE4E9',
+        headerStyle: 'bold',
+        accentColor: '#EAB8C4',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'square',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#D8D8D8',
+            sectionBorderWidth: 1,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#C8C8C8',
+        },
+        sections: [
+            { type: 'sectionBanner', title: 'Study Group Details', accentColor: '#F3C9D3' },
+            { type: 'text', title: 'Group Name:' },
+            { type: 'text', title: 'Members:' },
+            { type: 'text', title: 'Subject/Topic:' },
+            {
+                type: 'row',
+                children: [
+                    { type: 'text', title: 'Study Session Date:' },
+                    { type: 'text', title: 'Time:' },
+                ],
+            },
+            { type: 'sectionBanner', title: 'Study Goals & Objectives', accentColor: '#F3C9D3' },
+            { type: 'textarea', title: 'Main Goal' },
+            { type: 'textarea', title: 'Key Topics to Cover' },
+            { type: 'sectionBanner', title: 'Study Plan & Task Division', accentColor: '#F3C9D3' },
+            {
+                type: 'table',
+                columns: ['Time Slot', 'Activity', 'Responsible Member'],
+                rows: 5,
+            },
+            {
+                type: 'row',
+                children: [
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'sectionBanner', title: 'Resources Needed', accentColor: '#F3C9D3' },
+                            { type: 'checklistLine', count: 6 },
+                        ],
+                    },
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'sectionBanner', title: 'Doubts & Questions', accentColor: '#F3C9D3' },
+                            { type: 'checklistLine', count: 3 },
+                            { type: 'sectionBanner', title: 'Summary & Next Steps', accentColor: '#F3C9D3' },
+                            { type: 'text', title: 'Key Takeaways:' },
+                            { type: 'text', title: 'Next Meeting Date & Time:' },
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+    44: {
+        layout: 'valentines-activity-planner',
+        headerColor: '#B03052',
+        headerBg: '#FFFFFF',
+        headerStyle: 'script',
+        accentColor: '#B03052',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'underline',
+            bulletShape: 'heart',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: 'transparent',
+            sectionBorderWidth: 0,
+            sectionBorderRadius: 0,
+            inputUnderlineColor: '#D8D8D8',
+        },
+        sections: [
+            {
+                type: 'row',
+                children: [
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'checklistLine', title: 'Things to Make', count: 4, hideBullet: true },
+                            { type: 'checklistLine', title: 'Games to Play', count: 4, hideBullet: true },
+                            { type: 'checklistLine', title: 'Yummy Things to Eat and Drink', count: 6, hideBullet: true },
+                            { type: 'checklistLine', title: 'Books and Movies', count: 3, hideBullet: true },
+                        ],
+                    },
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'checklistLine', title: 'Shopping List', count: 14, hideBullet: true },
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+    45: {
+        layout: 'weekly-valentine-planner',
+        headerColor: '#B03052',
+        headerBg: '#FFFFFF',
+        headerStyle: 'script',
+        accentColor: '#B03052',
+        sheetBg: '#FFF9FA',
+        themeStyle: {
+            tagStyle: 'underline',
+            bulletShape: 'heart',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#F0C7D0',
+            sectionBorderWidth: 1,
+            sectionBorderRadius: 8,
+            inputUnderlineColor: '#E8B0BE',
+        },
+        sections: [
+            { type: 'text', title: 'Week Of:' },
+            {
+                type: 'row',
+                children: [
+                    { type: 'textarea', title: '💌 Monday' },
+                    { type: 'textarea', title: '💕 Tuesday' },
+                    { type: 'textarea', title: '💖 Wednesday' },
+                ],
+            },
+            {
+                type: 'row',
+                children: [
+                    { type: 'textarea', title: '💝 Thursday' },
+                    { type: 'textarea', title: '🌹 Friday' },
+                    {
+                        type: 'group',
+                        children: [
+                            { type: 'textarea', title: '💗 Saturday' },
+                            { type: 'textarea', title: '❤️ Sunday' },
+                        ],
+                    },
+                ],
+            },
+            { type: 'textarea', title: '💘 Notes' },
+        ],
+    },
+     46: {
+        layout: 'valentines-gift-idea-planner',
+        headerColor: '#C2185B',
+        headerBg: '#FFFFFF',
+        headerStyle: 'script',
+        accentColor: '#E091A8',
+        sheetBg: '#FFFFFF',
+        themeStyle: {
+            tagStyle: 'box',
+            bulletShape: 'heart',
+            sectionBg: '#FFFFFF',
+            sectionBorderColor: '#F0C0CC',
+            sectionBorderWidth: 1.2,
+            sectionBorderRadius: 6,
+            inputUnderlineColor: '#E8B0C0',
+        },
+        sections: [
+            {
+                type: 'table',
+                columns: ['Ideas', 'Where To Get It', 'When To Get It', 'Cost'],
+                rows: 16,
+            },
         ],
     },
 };

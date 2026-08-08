@@ -13,7 +13,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import libraryIcon from '../assets/icons/library.png';
 import calendarIcon from '../assets/icons/calendar.png';
 import templatesIcon from '../assets/icons/templates.png';
-import vaultIcon from '../assets/icons/templates.png';
+import vaultIcon from '../assets/icons/clipboard.png';
 import settingsIcon from '../assets/icons/settings.png';
 
 const Tab = createBottomTabNavigator<TabParamList>();
