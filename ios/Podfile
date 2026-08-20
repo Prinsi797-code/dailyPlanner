@@ -1,3 +1,12 @@
+# Disable react-native-firebase's Swift Package Manager resolution.
+# Firebase's SPM packages only ship DYNAMIC frameworks, which conflicts
+# with GoogleUserMessagingPlatform (pulled in by react-native-google-mobile-ads),
+# which only ships a STATIC xcframework. Disabling SPM makes Firebase resolve
+# through classic CocoaPods instead, which supports static linkage fine —
+# so the whole project can stay on the default static linkage with no
+# use_frameworks! needed at all.
+$RNFirebaseDisableSPM = true
+
 # Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
@@ -8,11 +17,12 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
+# Firebase's Swift pods (FirebaseCoreInternal, FirebaseRemoteConfig, etc.)
+# depend on GoogleUtilities / FirebaseABTesting, which don't define Swift
+# modules by default. When building as static libraries, CocoaPods needs
+# modular headers to import them from Swift — this generates those module
+# maps for every pod.
+use_modular_headers!
 
 target 'DailyPlannerApp' do
   config = use_native_modules!

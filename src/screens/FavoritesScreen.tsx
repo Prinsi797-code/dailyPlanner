@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,19 +7,24 @@ import {
   StyleSheet,
   SafeAreaView,
   Image,
-} from "react-native";
-import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "../navigation/types";
-import { useTheme } from "../theme/ThemeContext";
-import { getFavorites, toggleFavorite } from "../utils/favorites";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import Toast from "react-native-toast-message";
+} from 'react-native';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation/types';
+import { useTheme } from '../theme/ThemeContext';
+import { getFavorites, toggleFavorite } from '../utils/favorites';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import Toast from 'react-native-toast-message';
+import { useScreenInterstitial } from '../ads/useScreenInterstitial';
+import BannerAdSlot from '../ads/BannerAdSlot';
+import { AD_SCREENS } from '../ads/adConfig';
 import Animated, {
   SharedValue,
   useAnimatedStyle,
-} from "react-native-reanimated";
+} from 'react-native-reanimated';
+import AppText from '../components/AppText';
+import { useTranslation } from 'react-i18next';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -60,6 +65,7 @@ export default function FavoritesScreen() {
   const [favorites, setFavorites] = useState<any[]>([]);
   const swipeRefs = useRef<Map<string, any>>(new Map());
   const openRowId = useRef<string | null>(null);
+  const { t } = useTranslation();
 
   useFocusEffect(
     useCallback(() => {
@@ -67,16 +73,24 @@ export default function FavoritesScreen() {
     }, []),
   );
 
+  const showFavoriteInter = useScreenInterstitial(
+    AD_SCREENS.favorite_screen.inter,
+    'favorite_inter',
+  );
+
+  const handleBack = () => {
+    showFavoriteInter(() => navigation.goBack());
+  };
   const handleRemove = async (template: any) => {
     swipeRefs.current.get(template.id)?.close();
     openRowId.current = null;
     await toggleFavorite(template);
-    setFavorites((prev) => prev.filter((t) => t.id !== template.id));
+    setFavorites(prev => prev.filter(t => t.id !== template.id));
 
     Toast.show({
-      type: "success",
-      text1: "Removed from Favorites",
-      position: "bottom",
+      type: 'success',
+      text1: t('settings.RemovedfromFavorites'),
+      position: 'bottom',
       visibilityTime: 1200,
     });
   };
@@ -89,34 +103,34 @@ export default function FavoritesScreen() {
             styles.backBtn,
             { borderColor: colors.border, backgroundColor: colors.card },
           ]}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         >
           <Ionicons name="chevron-back" size={26} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Favorites
-        </Text>
+        <AppText style={[styles.headerTitle, { color: colors.text }]}>
+          {t('Favorites')}
+        </AppText>
         <View style={{ width: 34 }} />
       </View>
 
       {favorites.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>🤍</Text>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            No Favorites Yet
-          </Text>
-          <Text style={[styles.emptySub, { color: colors.subText }]}>
-            Templates preview me heart pe tap karke{"\n"}yaha add karo.
-          </Text>
+          {/* <Text style={styles.emptyEmoji}>🤍</Text> */}
+          <AppText style={[styles.emptyTitle, { color: colors.text }]}>
+            {t('settings.NoFavoritesYet')}
+          </AppText>
+          <AppText style={[styles.emptySub, { color: colors.subText }]}>
+            {t('settings.favoritesdetails')}
+          </AppText>
         </View>
       ) : (
         <FlatList
           data={favorites}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           contentContainerStyle={{ padding: 16 }}
           renderItem={({ item }) => (
             <Swipeable
-              ref={(ref) => swipeRefs.current.set(item.id, ref)}
+              ref={ref => swipeRefs.current.set(item.id, ref)}
               renderRightActions={(progress, drag) => (
                 <RightDeleteAction
                   drag={drag}
@@ -139,23 +153,23 @@ export default function FavoritesScreen() {
                   { backgroundColor: colors.card, borderColor: colors.border },
                 ]}
                 onPress={() =>
-                  navigation.navigate("TemplatePreview", { template: item })
+                  navigation.navigate('TemplatePreview', { template: item })
                 }
                 activeOpacity={0.8}
               >
-                <Text
+                <AppText
                   style={[styles.cardTitle, { color: colors.text }]}
                   numberOfLines={1}
                 >
                   {item.name}
-                </Text>
+                </AppText>
                 <Image
-                  source={require("../assets/icons/heart.png")}
+                  source={require('../assets/icons/heart.png')}
                   style={{
                     width: 20,
                     height: 20,
-                    tintColor: "#FF3B30",
-                    resizeMode: "contain",
+                    tintColor: '#FF3B30',
+                    resizeMode: 'contain',
                   }}
                 />
               </TouchableOpacity>
@@ -163,6 +177,7 @@ export default function FavoritesScreen() {
           )}
         />
       )}
+      <BannerAdSlot config={AD_SCREENS.favorite_screen.banner} />
     </SafeAreaView>
   );
 }
@@ -170,9 +185,9 @@ export default function FavoritesScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   topBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 8,
   },
@@ -181,34 +196,34 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTitle: { fontSize: 20, fontWeight: "700", },
+  headerTitle: { fontSize: 20, fontWeight: '700' },
   card: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: 10,
   },
-  cardTitle: { fontSize: 15, fontWeight: "600", flex: 1, marginRight: 8 },
+  cardTitle: { fontSize: 15, fontWeight: '600', flex: 1, marginRight: 8 },
   emptyState: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 32,
   },
   emptyEmoji: { fontSize: 40, marginBottom: 16 },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
+    fontWeight: '700',
+    textAlign: 'center',
     marginBottom: 10,
   },
-  emptySub: { fontSize: 14, textAlign: "center", lineHeight: 20 },
+  emptySub: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 
   actionContainer: {
     width: ACTION_CONTAINER_WIDTH,
@@ -219,9 +234,9 @@ const styles = StyleSheet.create({
     flex: 1,
     // backgroundColor: "#FF3B30",
     borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#FF3B30",
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF3B30',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
@@ -231,15 +246,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 15,
-    backgroundColor: "#FF3B30",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#FF3B30',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 4,
   },
   deleteText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: '700',
     letterSpacing: 0.3,
   },
 });

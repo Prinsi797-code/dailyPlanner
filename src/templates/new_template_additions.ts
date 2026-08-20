@@ -28,6 +28,7 @@ export const NEW_TEMPLATES = [
   // ── Personal ──────────────────────────────────────────────
   { id: 29, name: "My Diary 📔",           type: "daily",    category: "Personal" },
   { id: 30, name: "Student Planner 📚",    type: "daily",    category: "Student" },
+  { id: 31, name: "events",                type: "daily",    category: "events" },
 ];
 
 export const CATEGORY_ACCENT: Record<string, string> = {
@@ -39,4 +40,5 @@ export const CATEGORY_ACCENT: Record<string, string> = {
   "Work":          "#00A896",
   "Personal":      "#A0522D",
   "Student":       "#F77F00",
+  "events":        "#9A8C98",
 };

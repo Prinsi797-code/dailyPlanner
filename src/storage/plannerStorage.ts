@@ -6,6 +6,8 @@ export type SavedPlanner = {
   templateName: string;
   date: string;
   values: Record<string, string[]>;
+  backgroundIndex?: number; 
+  hideTitle?: boolean;
   updatedAt: number;
 };
 

@@ -1,21 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { useTheme } from "../theme/ThemeContext";
-import { useLayout, LayoutMode, DayOrder } from "../theme/LayoutContext";
-import Svg, { Circle, Line, Polygon } from "react-native-svg";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import { StackScreenProps } from "@react-navigation/stack";
-import { RootStackParamList } from "../navigation/types";
-
-const LAYOUT_OPTIONS: { mode: LayoutMode; label: string }[] = [
-  { mode: "grid", label: "2 per row" },
-  { mode: "list", label: "1 per row" },
-];
-
-const ORDER_OPTIONS: { mode: DayOrder; label: string }[] = [
-  { mode: "rowMajor", label: "Row order" },
-  { mode: "colMajor", label: "Column order" },
-];
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
+import { useLayout, LayoutMode, DayOrder } from '../theme/LayoutContext';
+import Svg, { Circle, Line, Polygon } from 'react-native-svg';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { StackScreenProps } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation/types';
+import { useScreenInterstitial } from '../ads/useScreenInterstitial';
+import { AD_SCREENS } from '../ads/adConfig';
+import NativeAdSlot from '../ads/NativeAdSlot';
+import AppText from '../components/AppText';
+import { useTranslation } from 'react-i18next';
 
 function LayoutPreview({
   mode,
@@ -26,10 +21,10 @@ function LayoutPreview({
 }) {
   return (
     <View style={styles.previewWrap}>
-      {[0, 1, 2].map((r) => (
+      {[0, 1, 2].map(r => (
         <View key={r} style={styles.previewRow}>
           <View style={[styles.previewBar, { backgroundColor: mutedColor }]} />
-          {mode === "grid" && (
+          {mode === 'grid' && (
             <View
               style={[styles.previewBar, { backgroundColor: mutedColor }]}
             />
@@ -69,10 +64,10 @@ function OrderPreview({
     y1: number;
     x2: number;
     y2: number;
-    dir: "right" | "down";
+    dir: 'right' | 'down';
   };
 
-  if (mode === "rowMajor") {
+  if (mode === 'rowMajor') {
     sequence = [
       { x: COL_X[0], y: ROW_Y[0] },
       { x: COL_X[1], y: ROW_Y[0] },
@@ -87,7 +82,7 @@ function OrderPreview({
       y1: ROW_Y[3],
       x2: COL_X[1] + 14,
       y2: ROW_Y[3],
-      dir: "right",
+      dir: 'right',
     };
   } else {
     sequence = [
@@ -104,7 +99,7 @@ function OrderPreview({
       y1: ROW_Y[2],
       x2: COL_X[1],
       y2: ROW_Y[3] + 14,
-      dir: "down",
+      dir: 'down',
     };
   }
 
@@ -135,14 +130,18 @@ function OrderPreview({
         stroke={mutedColor}
         strokeWidth={1.5}
       />
-      {arrow.dir === "right" ? (
+      {arrow.dir === 'right' ? (
         <Polygon
-          points={`${arrow.x2},${arrow.y2 - 5} ${arrow.x2},${arrow.y2 + 5} ${arrow.x2 + 8},${arrow.y2}`}
+          points={`${arrow.x2},${arrow.y2 - 5} ${arrow.x2},${arrow.y2 + 5} ${
+            arrow.x2 + 8
+          },${arrow.y2}`}
           fill={mutedColor}
         />
       ) : (
         <Polygon
-          points={`${arrow.x2 - 5},${arrow.y2} ${arrow.x2 + 5},${arrow.y2} ${arrow.x2},${arrow.y2 + 8}`}
+          points={`${arrow.x2 - 5},${arrow.y2} ${arrow.x2 + 5},${arrow.y2} ${
+            arrow.x2
+          },${arrow.y2 + 8}`}
           fill={mutedColor}
         />
       )}
@@ -157,6 +156,22 @@ function OrderPreview({
 export default function LayoutDaysOrderScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const { layoutMode, setLayoutMode, dayOrder, setDayOrder } = useLayout();
+  const { t } = useTranslation();
+  const showLayoutInter = useScreenInterstitial(
+    AD_SCREENS.layout_screen.inter,
+    'layout_inter',
+  );
+
+  const LAYOUT_OPTIONS: { mode: LayoutMode; label: string }[] = [
+    { mode: 'grid', label: t('settings.2perrow') },
+    { mode: 'list', label: t('settings.1perrow') },
+  ];
+
+  const ORDER_OPTIONS: { mode: DayOrder; label: string }[] = [
+    { mode: 'rowMajor', label: t('settings.Roworder') },
+    { mode: 'colMajor', label: t('settings.Columnorder') },
+  ];
+
   useEffect(() => {
     navigation.setOptions({ gestureEnabled: false });
   }, [navigation]);
@@ -175,7 +190,7 @@ export default function LayoutDaysOrderScreen({ route, navigation }: Props) {
 
       <View style={styles.topBar}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => showLayoutInter(() => navigation.goBack())}
           style={[
             styles.backBtn,
             { borderColor: colors.border, backgroundColor: colors.card },
@@ -184,17 +199,17 @@ export default function LayoutDaysOrderScreen({ route, navigation }: Props) {
           <Ionicons name="chevron-back" size={26} color={colors.primary} />
         </TouchableOpacity>
 
-        <Text style={[styles.heading, { color: colors.text }]}>
-          Layout & Days Order
-        </Text>
+        <AppText style={[styles.heading, { color: colors.text }]}>
+          {t('settings.LayoutDaysOrder')}
+        </AppText>
       </View>
 
-      <Text style={[styles.subHeading, { color: colors.subText }]}>
-        Choose how many day cards appear per row
-      </Text>
+      <AppText style={[styles.subHeading, { color: colors.subText }]}>
+        {t('settings.layoutdaysdetail')}
+      </AppText>
 
       <View style={styles.optionsGrid}>
-        {LAYOUT_OPTIONS.map((opt) => {
+        {LAYOUT_OPTIONS.map(opt => {
           const selected = layoutMode === opt.mode;
           return (
             <TouchableOpacity
@@ -221,29 +236,29 @@ export default function LayoutDaysOrderScreen({ route, navigation }: Props) {
                   <Text style={styles.checkMark}>✓</Text>
                 </View>
               )}
-              <Text
+              <AppText
                 style={[
                   styles.optionLabel,
                   { color: selected ? colors.primary : colors.text },
                 ]}
               >
                 {opt.label}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {layoutMode === "grid" && (
+      {layoutMode === 'grid' && (
         <>
           <Text style={[styles.heading, { color: colors.text, marginTop: 28 }]}>
             {/* Days Order */}
           </Text>
-          <Text style={[styles.subHeading, { color: colors.subText }]}>
-            Choose how dates fill the grid
-          </Text>
+          <AppText style={[styles.subHeading, { color: colors.subText }]}>
+            {t('settings.Choosegrid')}
+          </AppText>
           <View style={styles.optionsGrid}>
-            {ORDER_OPTIONS.map((opt) => {
+            {ORDER_OPTIONS.map(opt => {
               const selected = dayOrder === opt.mode;
               return (
                 <TouchableOpacity
@@ -281,6 +296,14 @@ export default function LayoutDaysOrderScreen({ route, navigation }: Props) {
           </View>
         </>
       )}
+      <View
+        style={[
+          styles.stickyAdBar,
+          { backgroundColor: colors.background, borderTopColor: colors.border },
+        ]}
+      >
+        <NativeAdSlot config={AD_SCREENS.layout_screen.native} />
+      </View>
     </View>
   );
 }
@@ -288,46 +311,54 @@ export default function LayoutDaysOrderScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 40,
     height: 34,
-    position: "relative",
+    position: 'relative',
   },
+  stickyAdBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+  },
+
   backBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 1,
   },
   heading: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     right: 0,
-    textAlign: "center",
+    textAlign: 'center',
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   subHeading: { fontSize: 13, marginTop: 16, marginBottom: 5 },
-  optionsGrid: { flexDirection: "row", gap: 14 },
-  optionCard: { flex: 1, borderRadius: 16, padding: 12, position: "relative" },
-  orderOptionCard: { alignItems: "center", justifyContent: "center" },
+  optionsGrid: { flexDirection: 'row', gap: 14 },
+  optionCard: { flex: 1, borderRadius: 16, padding: 12, position: 'relative' },
+  orderOptionCard: { alignItems: 'center', justifyContent: 'center' },
   previewWrap: { gap: 8, marginBottom: 10 },
-  previewRow: { flexDirection: "row", gap: 6, height: 26 },
+  previewRow: { flexDirection: 'row', gap: 6, height: 26 },
   previewBar: { flex: 1, borderRadius: 4 },
   checkBadge: {
-    position: "absolute",
+    position: 'absolute',
     top: 8,
     right: 8,
     width: 22,
     height: 22,
     borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  checkMark: { color: "#fff", fontSize: 12, fontWeight: "700" },
-  optionLabel: { fontSize: 13, fontWeight: "600", textAlign: "center" },
+  checkMark: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  optionLabel: { fontSize: 13, fontWeight: '600', textAlign: 'center' },
 });

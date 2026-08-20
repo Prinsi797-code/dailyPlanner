@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,56 +15,50 @@ import {
   LayoutAnimation,
   UIManager,
   Animated,
-} from "react-native";
-import { StackScreenProps } from "@react-navigation/stack";
-import { RootStackParamList } from "../navigation/types";
-import { useTheme } from "../theme/ThemeContext";
-import { saveCalendarNote, getAllCalendarNotes } from "./CalendarScreen";
-import { launchImageLibrary } from "react-native-image-picker";
+} from 'react-native';
+import { StackScreenProps } from '@react-navigation/stack';
+import { useScreenInterstitial } from '../ads/useScreenInterstitial';
+import { AD_SCREENS } from '../ads/adConfig';
+import { RootStackParamList } from '../navigation/types';
+import { useTheme } from '../theme/ThemeContext';
+import { saveCalendarNote, getAllCalendarNotes } from './CalendarScreen';
+import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker, {
   DateTimePickerAndroid,
-} from "@react-native-community/datetimepicker";
-import RNFS from "react-native-fs";
-import alarmIcon from "../assets/icons/alarm.png";
-import clipIcon from "../assets/icons/clip.png";
-import letterIcon from "../assets/icons/letter.png";
-import colorWheelIcon from "../assets/icons/color.png";
-import notifee, { TriggerType, AndroidImportance } from "@notifee/react-native";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import Share from "react-native-share";
-import { useLayout, LineType } from "../theme/LayoutContext";
-import Ionicons from "react-native-vector-icons/Ionicons";
+} from '@react-native-community/datetimepicker';
+import RNFS from 'react-native-fs';
+import alarmIcon from '../assets/icons/alarm.png';
+import clipIcon from '../assets/icons/clip.png';
+import letterIcon from '../assets/icons/letter.png';
+import colorWheelIcon from '../assets/icons/color.png';
+import notifee, { TriggerType, AndroidImportance } from '@notifee/react-native';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import Share from 'react-native-share';
+import { useLayout, LineType } from '../theme/LayoutContext';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import AppText from '../components/AppText';
+import { useTranslation } from 'react-i18next';
 
-type Props = StackScreenProps<RootStackParamList, "CalendarNote">;
+type Props = StackScreenProps<RootStackParamList, 'CalendarNote'>;
 
 const FS = 15;
 const LH = 32;
 const LINE_COUNT = 30;
 const MONTH_SHORT = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
-const COLOR_OPTIONS: { name: string; value: string | null }[] = [
-  { name: "Default", value: null },
-  { name: "Blue", value: "#2979FF" },
-  { name: "Gray", value: "#9E9E9E" },
-  { name: "Red", value: "#E53935" },
-  { name: "Orange", value: "#FB8C00" },
-  { name: "Yellow", value: "#FDD835" },
-  { name: "Green", value: "#43A047" },
-  { name: "Purple", value: "#8E24AA" },
-  { name: "Pink", value: "#F06292" },
-];
+
 function SheetModal({
   visible,
   onClose,
@@ -117,13 +111,13 @@ function SheetModal({
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: "rgba(0,0,0,0.4)", opacity: fade },
+              { backgroundColor: 'rgba(0,0,0,0.4)', opacity: fade },
             ]}
           >
             <TouchableOpacity
@@ -152,10 +146,10 @@ type Run = {
   strike?: boolean;
   align?: Align;
 };
-type TBlock = { id: string; kind: "text"; runs: Run[] };
+type TBlock = { id: string; kind: 'text'; runs: Run[] };
 type CBlock = {
   id: string;
-  kind: "check";
+  kind: 'check';
   text: string;
   checked: boolean;
   bold?: boolean;
@@ -166,8 +160,8 @@ type CBlock = {
 };
 type LBlock = {
   id: string;
-  kind: "list";
-  listType: "ordered" | "bullet";
+  kind: 'list';
+  listType: 'ordered' | 'bullet';
   text: string;
   bold?: boolean;
   italic?: boolean;
@@ -177,7 +171,7 @@ type LBlock = {
 };
 type ABlock = {
   id: string;
-  kind: "attachment";
+  kind: 'attachment';
   uri: string;
   name: string;
   mimeType?: string;
@@ -188,14 +182,14 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 }
 
-type Align = "left" | "center" | "right" | "justify";
+type Align = 'left' | 'center' | 'right' | 'justify';
 
 function orderedNumber(blocks: Block[], id: string): number {
-  const idx = blocks.findIndex((b) => b.id === id);
+  const idx = blocks.findIndex(b => b.id === id);
   let n = 0;
   for (let i = idx; i >= 0; i--) {
     const b = blocks[i];
-    if (b.kind === "list" && b.listType === "ordered") n++;
+    if (b.kind === 'list' && b.listType === 'ordered') n++;
     else break;
   }
   return n;
@@ -204,10 +198,10 @@ function orderedNumber(blocks: Block[], id: string): number {
 function formatReminder(d: Date): string {
   let h = d.getHours();
   const m = d.getMinutes();
-  const ampm = h >= 12 ? "PM" : "AM";
+  const ampm = h >= 12 ? 'PM' : 'AM';
   h = h % 12;
   if (h === 0) h = 12;
-  const mm = m.toString().padStart(2, "0");
+  const mm = m.toString().padStart(2, '0');
   return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}, ${h}:${mm} ${ampm}`;
 }
 
@@ -222,12 +216,12 @@ function RuleSegments({
 }) {
   if (width <= 0) return null;
 
-  if (type === "dot") {
+  if (type === 'dot') {
     const size = 2.4,
       gap = 4.6;
     const count = Math.max(1, Math.floor(width / (size + gap)));
     return (
-      <View style={{ flexDirection: "row", overflow: "hidden" }}>
+      <View style={{ flexDirection: 'row', overflow: 'hidden' }}>
         {Array.from({ length: count }).map((_, i) => (
           <View
             key={i}
@@ -244,12 +238,12 @@ function RuleSegments({
     );
   }
 
-  if (type === "dash") {
+  if (type === 'dash') {
     const dashWidth = 7,
       gap = 5;
     const count = Math.max(1, Math.floor(width / (dashWidth + gap)));
     return (
-      <View style={{ flexDirection: "row", overflow: "hidden" }}>
+      <View style={{ flexDirection: 'row', overflow: 'hidden' }}>
         {Array.from({ length: count }).map((_, i) => (
           <View
             key={i}
@@ -269,8 +263,8 @@ function RuleSegments({
     <View
       style={{
         width,
-        height: type === "round" ? 2 : 1,
-        borderRadius: type === "round" ? 2 : 1,
+        height: type === 'round' ? 2 : 1,
+        borderRadius: type === 'round' ? 2 : 1,
         backgroundColor: color,
       }}
     />
@@ -281,23 +275,28 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
   const { dateKey, dateLabel } = route.params;
   const { colors, isDark } = useTheme();
   const { lineType } = useLayout();
+  const showCalendarInter = useScreenInterstitial(
+    AD_SCREENS.calendar_screen.inter,
+    'calendar_inter',
+  );
+
   const [blocks, setBlocks] = useState<Block[]>([
     {
-      id: "b0",
-      kind: "text",
-      runs: [{ id: uid(), text: "", color: isDark ? "#FFFFFF" : "#000000" }],
+      id: 'b0',
+      kind: 'text',
+      runs: [{ id: uid(), text: '', color: isDark ? '#FFFFFF' : '#000000' }],
     },
   ]);
-  const [txtColor, setTxtColor] = useState(isDark ? "#FFFFFF" : "#000000");
+  const [txtColor, setTxtColor] = useState(isDark ? '#FFFFFF' : '#000000');
   const [userPickedColor, setUserPickedColor] = useState(false);
   const [activeTextBlockId, setActiveTextBlockId] = useState<string | null>(
-    "b0",
+    'b0',
   );
   const [bold, setBold] = useState(false);
   const [italic, setItalic] = useState(false);
   const [underline, setUnderline] = useState(false);
   const [strike, setStrike] = useState(false);
-  const [align, setAlign] = useState<Align>("left");
+  const [align, setAlign] = useState<Align>('left');
   const [showCP, setShowCP] = useState(false);
   const [showTextOptions, setShowTextOptions] = useState(false);
 
@@ -309,10 +308,10 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
   const [isLocked, setIsLocked] = useState(false);
   const [passwordHash, setPasswordHash] = useState<string | null>(null);
   const [showLockModal, setShowLockModal] = useState(false);
-  const [lockPwd, setLockPwd] = useState("");
-  const [lockPwdConfirm, setLockPwdConfirm] = useState("");
-  const [lockError, setLockError] = useState("");
-  const [lockMode, setLockMode] = useState<"set" | "remove">("set");
+  const [lockPwd, setLockPwd] = useState('');
+  const [lockPwdConfirm, setLockPwdConfirm] = useState('');
+  const [lockError, setLockError] = useState('');
+  const [lockMode, setLockMode] = useState<'set' | 'remove'>('set');
   const [contentHeight, setContentHeight] = useState(0);
   const lineCount = Math.max(LINE_COUNT, Math.ceil(contentHeight / LH) + 4);
 
@@ -320,18 +319,31 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
   const [showMenu, setShowMenu] = useState(false);
   const [runWidths, setRunWidths] = useState<Record<string, number>>({});
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [unlockPwd, setUnlockPwd] = useState("");
-  const [unlockError, setUnlockError] = useState("");
+  const [unlockPwd, setUnlockPwd] = useState('');
+  const [unlockError, setUnlockError] = useState('');
   const [pageWidth, setPageWidth] = useState(0);
+  const { t } = useTranslation();
 
   const HIGHLIGHT_OPTIONS: { name: string; value: string | null }[] = [
-    { name: "None", value: null },
-    { name: "Pink", value: "#FADADD" },
-    { name: "Yellow", value: "#FFF3B0" },
-    { name: "Green", value: "#C8F0C8" },
-    { name: "Blue", value: "#CDE7FF" },
-    { name: "Purple", value: "#E6D6FA" },
-    { name: "Orange", value: "#FFE0C2" },
+    { name: t('settings.None'), value: null },
+    { name: t('settings.Pink'), value: '#FADADD' },
+    { name: t('settings.Yellow'), value: '#FFF3B0' },
+    { name: t('settings.Green'), value: '#C8F0C8' },
+    { name: t('settings.Blue'), value: '#CDE7FF' },
+    { name: t('settings.Purple'), value: '#E6D6FA' },
+    { name: t('settings.Orange'), value: '#FFE0C2' },
+  ];
+
+  const COLOR_OPTIONS: { name: string; value: string | null }[] = [
+    { name: t('settings.Default'), value: null },
+    { name: t('settings.Blue'), value: '#2979FF' },
+    { name: t('settings.Gray'), value: '#9E9E9E' },
+    { name: t('settings.Red'), value: '#E53935' },
+    { name: t('settings.Orange'), value: '#FB8C00' },
+    { name: t('settings.Yellow'), value: '#FDD835' },
+    { name: t('settings.Green'), value: '#43A047' },
+    { name: t('settings.Purple'), value: '#8E24AA' },
+    { name: t('settings.Pink'), value: '#F06292' },
   ];
 
   const [showHL, setShowHL] = useState(false);
@@ -352,19 +364,18 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
   const applyHighlightChange = (bg: string | null) => {
     const targetId =
       activeTextBlockId &&
-      blocks.some((b) => b.id === activeTextBlockId && b.kind === "text")
+      blocks.some(b => b.id === activeTextBlockId && b.kind === 'text')
         ? activeTextBlockId
         : getLastTextBlockId();
     if (!targetId) return;
 
-    setBlocks((prev) =>
-      prev.map((b) => {
-        if (b.id !== targetId || b.kind !== "text") return b;
+    setBlocks(prev =>
+      prev.map(b => {
+        if (b.id !== targetId || b.kind !== 'text') return b;
         const tb = b as TBlock;
-        // Poore block ke sab runs pe bg apply karo — sirf active run pe nahi
         return {
           ...tb,
-          runs: tb.runs.map((r) => ({ ...r, bg })),
+          runs: tb.runs.map(r => ({ ...r, bg })),
         };
       }),
     );
@@ -381,21 +392,21 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
   }, [navigation]);
 
   useEffect(() => {
-    if (!userPickedColor) setTxtColor(isDark ? "#FFFFFF" : "#000000");
+    if (!userPickedColor) setTxtColor(isDark ? '#FFFFFF' : '#000000');
   }, [isDark]);
 
   useEffect(() => {
-    getAllCalendarNotes().then((all) => {
+    getAllCalendarNotes().then(all => {
       if (!all[dateKey]) return;
       try {
         const p = JSON.parse(all[dateKey]);
         const applyColor = (saved?: string) => {
           const isDefaultBW =
             !saved ||
-            saved.toLowerCase() === "#000000" ||
-            saved.toLowerCase() === "#ffffff";
+            saved.toLowerCase() === '#000000' ||
+            saved.toLowerCase() === '#ffffff';
           if (isDefaultBW) {
-            setTxtColor(isDark ? "#FFFFFF" : "#000000");
+            setTxtColor(isDark ? '#FFFFFF' : '#000000');
             setUserPickedColor(false);
           } else {
             setTxtColor(saved!);
@@ -404,77 +415,77 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
         };
 
         const fallbackColor = () =>
-          p.txtColor || p.textColor || (isDark ? "#FFFFFF" : "#000000");
+          p.txtColor || p.textColor || (isDark ? '#FFFFFF' : '#000000');
 
         const migrateBlocks = (rawBlocks: any[], fallback: string): Block[] =>
           (rawBlocks || []).map((b: any) => {
-            if (b.kind === "text") {
+            if (b.kind === 'text') {
               if (Array.isArray(b.runs) && b.runs.length) {
-                return { id: b.id, kind: "text", runs: b.runs } as TBlock;
+                return { id: b.id, kind: 'text', runs: b.runs } as TBlock;
               }
               return {
                 id: b.id,
-                kind: "text",
-                runs: [{ id: uid(), text: b.value ?? "", color: fallback }],
+                kind: 'text',
+                runs: [{ id: uid(), text: b.value ?? '', color: fallback }],
               } as TBlock;
             }
             return b as Block;
           });
 
-        if (p.__type === "blocksV2") {
+        if (p.__type === 'blocksV2') {
           const migrated = migrateBlocks(p.blocks, fallbackColor());
           setBlocks(migrated);
-          const firstText = migrated.find((b) => b.kind === "text");
+          const firstText = migrated.find(b => b.kind === 'text');
           setActiveTextBlockId(firstText ? firstText.id : null);
           applyColor(p.txtColor);
           setBold(p.bold || false);
           setItalic(p.italic || false);
           setUnderline(p.underline || false);
           setStrike(p.strike || false);
-          setAlign(p.align || "left");
+          setAlign(p.align || 'left');
           setReminderAt(p.reminderAt ? new Date(p.reminderAt) : null);
           if (p.locked && p.passwordHash) {
             setIsLocked(true);
             setPasswordHash(p.passwordHash);
             setShowUnlockGate(true);
           }
-        } else if (p.__type === "blocksNote") {
+        } else if (p.__type === 'blocksNote') {
           const fb = fallbackColor();
           const m: Block[] = (p.blocks || []).map((b: any) =>
-            b.type === "check"
-              ? { id: b.id, kind: "check", text: b.text, checked: b.checked }
+            b.type === 'check'
+              ? { id: b.id, kind: 'check', text: b.text, checked: b.checked }
               : {
                   id: b.id,
-                  kind: "text",
-                  runs: [{ id: uid(), text: b.value ?? "", color: fb }],
+                  kind: 'text',
+                  runs: [{ id: uid(), text: b.value ?? '', color: fb }],
                 },
           );
           const finalBlocks = m.length
             ? m
             : [
                 {
-                  id: "b0",
-                  kind: "text",
-                  runs: [{ id: uid(), text: "", color: fb }],
+                  id: 'b0',
+                  kind: 'text',
+                  runs: [{ id: uid(), text: '', color: fb }],
                 } as Block,
               ];
           setBlocks(finalBlocks);
-          const firstText = finalBlocks.find((b) => b.kind === "text");
+          const firstText = finalBlocks.find(b => b.kind === 'text');
           setActiveTextBlockId(firstText ? firstText.id : null);
           applyColor(p.textColor);
-        } else if (p.__type === "richNote") {
+        } else if (p.__type === 'richNote') {
           const fb = fallbackColor();
           const m: Block[] = [
             {
               id: uid(),
-              kind: "text",
-              runs: [{ id: uid(), text: p.text || "", color: fb }],
+              kind: 'text',
+              runs: [{ id: uid(), text: p.text || '', color: fb }],
             },
           ];
           (p.checklist || []).forEach((it: any) =>
             m.push({
               id: it.id,
-              kind: "check",
+              kind: 'check',
               text: it.text,
               checked: it.checked,
             }),
@@ -483,24 +494,24 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
           setActiveTextBlockId(m[0].id);
           applyColor(p.textColor);
         } else {
-          const fb = isDark ? "#FFFFFF" : "#000000";
+          const fb = isDark ? '#FFFFFF' : '#000000';
           const bId = uid();
           setBlocks([
             {
               id: bId,
-              kind: "text",
+              kind: 'text',
               runs: [{ id: uid(), text: all[dateKey], color: fb }],
             },
           ]);
           setActiveTextBlockId(bId);
         }
       } catch {
-        const fb = isDark ? "#FFFFFF" : "#000000";
+        const fb = isDark ? '#FFFFFF' : '#000000';
         const bId = uid();
         setBlocks([
           {
             id: bId,
-            kind: "text",
+            kind: 'text',
             runs: [{ id: uid(), text: all[dateKey], color: fb }],
           },
         ]);
@@ -513,7 +524,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     await saveCalendarNote(
       dateKey,
       JSON.stringify({
-        __type: "blocksV2",
+        __type: 'blocksV2',
         blocks,
         txtColor,
         bold,
@@ -526,21 +537,21 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
         passwordHash,
       }),
     );
-    navigation.goBack();
+    showCalendarInter(() => navigation.goBack());
   };
 
   const openLockModal = () => {
-    setLockPwd("");
-    setLockPwdConfirm("");
-    setLockError("");
-    setLockMode(isLocked ? "remove" : "set");
+    setLockPwd('');
+    setLockPwdConfirm('');
+    setLockError('');
+    setLockMode(isLocked ? 'remove' : 'set');
     setShowLockModal(true);
   };
 
   const confirmSetLock = () => {
-    if (lockMode === "remove") {
+    if (lockMode === 'remove') {
       if (simpleHash(lockPwd) !== passwordHash) {
-        setLockError("Incorrect password");
+        setLockError(t('settings.Incorrectpassword'));
         return;
       }
       setIsLocked(false);
@@ -549,11 +560,11 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
       return;
     }
     if (lockPwd.length < 4) {
-      setLockError("Password must be at least 4 characters");
+      setLockError(t('settings.Passwordmust'));
       return;
     }
     if (lockPwd !== lockPwdConfirm) {
-      setLockError("Passwords do not match");
+      setLockError(t('settings.Passwordsdo'));
       return;
     }
     setIsLocked(true);
@@ -564,21 +575,21 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
   const submitUnlock = () => {
     if (simpleHash(unlockPwd) === passwordHash) {
       setShowUnlockGate(false);
-      setUnlockPwd("");
-      setUnlockError("");
+      setUnlockPwd('');
+      setUnlockError('');
     } else {
-      setUnlockError("Incorrect password");
+      setUnlockError(t('settings.Incorrectpassword'));
     }
   };
 
   const hexToRgb01 = (hex: string) => {
-    const h = (hex || "#000000").replace("#", "");
+    const h = (hex || '#000000').replace('#', '');
     const full =
       h.length === 3
         ? h
-            .split("")
-            .map((c) => c + c)
-            .join("")
+            .split('')
+            .map(c => c + c)
+            .join('')
         : h;
     const r = parseInt(full.slice(0, 2), 16) / 255;
     const g = parseInt(full.slice(2, 4), 16) / 255;
@@ -630,16 +641,16 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
       const bodyFont = bold ? fontBold : font;
 
       const textBlocks = blocks.filter(
-        (b) => b.kind === "text" || b.kind === "check" || b.kind === "list",
+        b => b.kind === 'text' || b.kind === 'check' || b.kind === 'list',
       );
       const imageBlocks = blocks.filter(
-        (b) => b.kind === "attachment",
+        b => b.kind === 'attachment',
       ) as ABlock[];
 
       for (const block of textBlocks) {
-        if (block.kind === "text") {
+        if (block.kind === 'text') {
           const tb = block as TBlock;
-          const combined = tb.runs.map((r) => r.text).join("");
+          const combined = tb.runs.map(r => r.text).join('');
           if (combined.trim()) {
             let cursorX = margin;
             for (const run of tb.runs) {
@@ -647,13 +658,13 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               const runColor = hexToRgb01(run.color);
               const cleanRunText = stripControlCharsKeepNewline(run.text);
               const safeRunText = safeEncode(bodyFont, cleanRunText);
-              const subLines = safeRunText.split("\n");
+              const subLines = safeRunText.split('\n');
 
               for (let li = 0; li < subLines.length; li++) {
-                const words = subLines[li].split(" ");
+                const words = subLines[li].split(' ');
                 for (let wi = 0; wi < words.length; wi++) {
                   const isLast = wi === words.length - 1;
-                  const word = words[wi] + (isLast ? "" : " ");
+                  const word = words[wi] + (isLast ? '' : ' ');
                   if (!word) continue;
                   const wordWidth = bodyFont.widthOfTextAtSize(word, 12);
                   if (cursorX + wordWidth > pW - margin) {
@@ -694,20 +705,23 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
           }
         }
 
-        if (block.kind === "check") {
+        if (block.kind === 'check') {
           drawLine(
-            `${block.checked ? "[x]" : "[ ]"} ${safeEncode(font, sanitizePdfText(block.text))}`,
+            `${block.checked ? '[x]' : '[ ]'} ${safeEncode(
+              font,
+              sanitizePdfText(block.text),
+            )}`,
             12,
             font,
             textColor,
           );
         }
 
-        if (block.kind === "list") {
+        if (block.kind === 'list') {
           const marker =
-            block.listType === "ordered"
+            block.listType === 'ordered'
               ? `${orderedNumber(blocks, block.id)}.`
-              : "-";
+              : '-';
           drawLine(
             `${marker} ${safeEncode(font, sanitizePdfText(block.text))}`,
             12,
@@ -719,18 +733,18 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
 
       if (imageBlocks.length > 0) {
         y -= 10;
-        drawLine("— Attachments —", 10, font, rgb(0.6, 0.6, 0.6));
+        drawLine('— Attachments —', 10, font, rgb(0.6, 0.6, 0.6));
         y -= 6;
 
         for (const block of imageBlocks) {
-          const isImg = !!block.mimeType?.startsWith("image/");
+          const isImg = !!block.mimeType?.startsWith('image/');
           if (isImg) {
             try {
-              const imgPath = block.uri.replace("file://", "");
-              const imgBase64 = await RNFS.readFile(imgPath, "base64");
+              const imgPath = block.uri.replace('file://', '');
+              const imgBase64 = await RNFS.readFile(imgPath, 'base64');
 
               let embeddedImg;
-              if (block.mimeType?.includes("png")) {
+              if (block.mimeType?.includes('png')) {
                 embeddedImg = await pdfDoc.embedPng(imgBase64);
               } else {
                 embeddedImg = await pdfDoc.embedJpg(imgBase64);
@@ -778,12 +792,12 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
 
       const pdfBytes = await pdfDoc.saveAsBase64();
       const path = `${RNFS.DocumentDirectoryPath}/note_${dateKey}.pdf`;
-      await RNFS.writeFile(path, pdfBytes, "base64");
+      await RNFS.writeFile(path, pdfBytes, 'base64');
       setGeneratingPdf(false);
       return path;
     } catch (e: any) {
       setGeneratingPdf(false);
-      Alert.alert("PDF Error", e?.message || "Failed to generate PDF");
+      Alert.alert('PDF Error', e?.message || 'Failed to generate PDF');
       return null;
     }
   };
@@ -792,14 +806,14 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     const targetId = activeTextBlockId ?? blocks[blocks.length - 1]?.id;
     if (!targetId) return;
 
-    setBlocks((prev) =>
-      prev.map((b) => {
+    setBlocks(prev =>
+      prev.map(b => {
         if (b.id !== targetId) return b;
 
-        if (b.kind === "text") {
+        if (b.kind === 'text') {
           const tb = b as TBlock;
           const last = tb.runs[tb.runs.length - 1];
-          if (last.text === "") {
+          if (last.text === '') {
             return {
               ...tb,
               runs: [...tb.runs.slice(0, -1), { ...last, ...patch }],
@@ -807,11 +821,11 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
           }
           return {
             ...tb,
-            runs: [...tb.runs, { ...last, id: uid(), text: "", ...patch }],
+            runs: [...tb.runs, { ...last, id: uid(), text: '', ...patch }],
           };
         }
 
-        if (b.kind === "check" || b.kind === "list") {
+        if (b.kind === 'check' || b.kind === 'list') {
           return { ...b, ...patch } as Block;
         }
 
@@ -825,14 +839,14 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     if (!path) return;
     try {
       await Share.open({
-        url: Platform.OS === "android" ? `file://${path}` : path,
-        type: "application/pdf",
+        url: Platform.OS === 'android' ? `file://${path}` : path,
+        type: 'application/pdf',
         title: dateLabel,
         failOnCancel: false,
       });
     } catch (e: any) {
-      if (e?.message !== "User did not share")
-        Alert.alert("Save Error", e?.message || "Failed to save PDF");
+      if (e?.message !== 'User did not share')
+        Alert.alert('Save Error', e?.message || 'Failed to save PDF');
     }
   };
 
@@ -842,14 +856,14 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     if (!path) return;
     try {
       await Share.open({
-        url: Platform.OS === "android" ? `file://${path}` : path,
-        type: "application/pdf",
+        url: Platform.OS === 'android' ? `file://${path}` : path,
+        type: 'application/pdf',
         title: dateLabel,
         failOnCancel: false,
       });
     } catch (e: any) {
-      if (e?.message !== "User did not share")
-        Alert.alert("Share Error", e?.message || "Failed to share");
+      if (e?.message !== 'User did not share')
+        Alert.alert('Share Error', e?.message || 'Failed to share');
     }
   };
 
@@ -857,27 +871,27 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     setTimeout(() => refs.current[id]?.focus(), ms);
 
   const insertAfter = (afterId: string, nb: Block) => {
-    setBlocks((prev) => {
-      const i = prev.findIndex((b) => b.id === afterId);
+    setBlocks(prev => {
+      const i = prev.findIndex(b => b.id === afterId);
       const next = [...prev];
       next.splice(i + 1, 0, nb);
       return next;
     });
-    if (nb.kind === "text") setActiveTextBlockId(nb.id);
+    if (nb.kind === 'text') setActiveTextBlockId(nb.id);
     focus(nb.id);
   };
 
   const getLastTextBlockId = (): string | null => {
     for (let i = blocks.length - 1; i >= 0; i--) {
-      if (blocks[i].kind === "text") return blocks[i].id;
+      if (blocks[i].kind === 'text') return blocks[i].id;
     }
     return null;
   };
 
   const updateActiveRunText = (blockId: string, text: string) =>
-    setBlocks((prev) =>
-      prev.map((b) => {
-        if (b.id !== blockId || b.kind !== "text") return b;
+    setBlocks(prev =>
+      prev.map(b => {
+        if (b.id !== blockId || b.kind !== 'text') return b;
         const tb = b as TBlock;
         const runs = [...tb.runs];
         runs[runs.length - 1] = { ...runs[runs.length - 1], text };
@@ -888,18 +902,18 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
   const applyColorChange = (color: string) => {
     const targetId =
       activeTextBlockId &&
-      blocks.some((b) => b.id === activeTextBlockId && b.kind === "text")
+      blocks.some(b => b.id === activeTextBlockId && b.kind === 'text')
         ? activeTextBlockId
         : getLastTextBlockId();
     if (!targetId) return;
 
-    const block = blocks.find((b) => b.id === targetId) as TBlock | undefined;
+    const block = blocks.find(b => b.id === targetId) as TBlock | undefined;
     if (!block) return;
     const last = block.runs[block.runs.length - 1];
 
-    if (last.text === "") {
-      setBlocks((prev) =>
-        prev.map((b) =>
+    if (last.text === '') {
+      setBlocks(prev =>
+        prev.map(b =>
           b.id === targetId
             ? {
                 ...b,
@@ -912,14 +926,14 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     }
 
     if (last.color.toLowerCase() === color.toLowerCase()) return;
-    setBlocks((prev) =>
-      prev.map((b) =>
+    setBlocks(prev =>
+      prev.map(b =>
         b.id === targetId
           ? {
               ...(b as TBlock),
               runs: [
                 ...(b as TBlock).runs,
-                { ...last, id: uid(), text: "", color },
+                { ...last, id: uid(), text: '', color },
               ],
             }
           : b,
@@ -953,9 +967,9 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
   };
 
   const mergeBackIntoActiveRun = (blockId: string) =>
-    setBlocks((prev) =>
-      prev.map((b) => {
-        if (b.id !== blockId || b.kind !== "text") return b;
+    setBlocks(prev =>
+      prev.map(b => {
+        if (b.id !== blockId || b.kind !== 'text') return b;
         const tb = b as TBlock;
         if (tb.runs.length <= 1) return tb;
         return { ...tb, runs: tb.runs.slice(0, -1) };
@@ -963,16 +977,16 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     );
 
   const upd = (id: string, patch: Partial<Block>) =>
-    setBlocks((prev) =>
-      prev.map((b) => (b.id === id ? ({ ...b, ...patch } as Block) : b)),
+    setBlocks(prev =>
+      prev.map(b => (b.id === id ? ({ ...b, ...patch } as Block) : b)),
     );
 
   const del = (id: string) =>
-    setBlocks((prev) => {
+    setBlocks(prev => {
       if (prev.length === 1) return prev;
-      const i = prev.findIndex((b) => b.id === id);
-      const next = prev.filter((b) => b.id !== id);
-      focus(next[Math.max(0, i - 1)]?.id ?? "");
+      const i = prev.findIndex(b => b.id === id);
+      const next = prev.filter(b => b.id !== id);
+      focus(next[Math.max(0, i - 1)]?.id ?? '');
       return next;
     });
 
@@ -980,8 +994,8 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     const anchorId = activeTextBlockId ?? blocks[blocks.length - 1]?.id;
     const nb: CBlock = {
       id: uid(),
-      kind: "check",
-      text: "",
+      kind: 'check',
+      text: '',
       checked: false,
       bold,
       italic,
@@ -992,18 +1006,18 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     if (anchorId) {
       insertAfter(anchorId, nb);
     } else {
-      setBlocks((prev) => [...prev, nb]);
+      setBlocks(prev => [...prev, nb]);
       focus(nb.id);
     }
   };
 
-  const addListAtEnd = (listType: "ordered" | "bullet") => {
+  const addListAtEnd = (listType: 'ordered' | 'bullet') => {
     const anchorId = activeTextBlockId ?? blocks[blocks.length - 1]?.id;
     const nb: LBlock = {
       id: uid(),
-      kind: "list",
+      kind: 'list',
       listType,
-      text: "",
+      text: '',
       bold,
       italic,
       underline,
@@ -1013,20 +1027,20 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     if (anchorId) {
       insertAfter(anchorId, nb);
     } else {
-      setBlocks((prev) => [...prev, nb]);
+      setBlocks(prev => [...prev, nb]);
       focus(nb.id);
     }
     setShowTextOptions(false);
   };
 
   const convertToText = (id: string) => {
-    setBlocks((prev) =>
-      prev.map((b) =>
+    setBlocks(prev =>
+      prev.map(b =>
         b.id === id
           ? ({
               id,
-              kind: "text",
-              runs: [{ id: uid(), text: "", color: txtColor }],
+              kind: 'text',
+              runs: [{ id: uid(), text: '', color: txtColor }],
             } as Block)
           : b,
       ),
@@ -1037,7 +1051,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
 
   const pickAttachment = async () => {
     const result = await launchImageLibrary({
-      mediaType: "photo",
+      mediaType: 'photo',
       selectionLimit: 1,
       quality: 0.9,
     });
@@ -1047,32 +1061,45 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     try {
       const dir = `${RNFS.DocumentDirectoryPath}/attachments`;
       if (!(await RNFS.exists(dir))) await RNFS.mkdir(dir);
-      const ext = (asset.fileName?.split(".").pop() || "jpg").toLowerCase();
+      const ext = (asset.fileName?.split('.').pop() || 'jpg').toLowerCase();
       const destPath = `${dir}/${uid()}.${ext}`;
       await RNFS.copyFile(asset.uri, destPath);
       const persistentUri =
-        Platform.OS === "android" ? `file://${destPath}` : destPath;
+        Platform.OS === 'android' ? `file://${destPath}` : destPath;
       const nb: ABlock = {
         id: uid(),
-        kind: "attachment",
+        kind: 'attachment',
         uri: persistentUri,
-        name: asset.fileName || "image.jpg",
-        mimeType: asset.type || "image/jpeg",
+        name: asset.fileName || 'image.jpg',
+        mimeType: asset.type || 'image/jpeg',
       };
-      setBlocks((prev) => [...prev, nb]);
+      setBlocks(prev => [...prev, nb]);
     } catch (e) {
-      console.log("Failed to persist attachment:", e);
+      console.log('Failed to persist attachment:', e);
     }
   };
 
   const ensureChannel = async () => {
-    if (Platform.OS === "android") {
+    if (Platform.OS === 'android') {
       await notifee.createChannel({
-        id: "reminders",
-        name: "Calendar Reminders",
+        id: 'reminders_v2',
+        name: 'Calendar Reminders',
         importance: AndroidImportance.HIGH,
+        sound: 'default',
       });
     }
+  };
+
+  const getNotePreviewText = (): string => {
+    for (const b of blocks) {
+      if (b.kind === 'text') {
+        const t = (b as TBlock).runs.map(r => r.text).join('');
+        if (t.trim()) return t.trim();
+      } else if (b.kind === 'check' || b.kind === 'list') {
+        if (b.text?.trim()) return b.text.trim();
+      }
+    }
+    return t('settings.Writenotes');
   };
 
   const scheduleNotification = async (date: Date, key: string) => {
@@ -1080,37 +1107,61 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
     await ensureChannel();
     await notifee.cancelNotification(key);
     if (date.getTime() <= Date.now()) return;
+
+    const previewText = getNotePreviewText();
+
     await notifee.createTriggerNotification(
       {
         id: key,
-        title: "Reminder",
-        body: dateLabel,
+        title: dateLabel,
+        body: previewText,
         data: { dateKey: key, dateLabel },
-        android: { channelId: "reminders", pressAction: { id: "default" } },
+        android: {
+          channelId: 'reminders_v2',
+          pressAction: { id: 'default' },
+          sound: 'default',
+        },
+        ios: { sound: 'default' },
       },
       { type: TriggerType.TIMESTAMP, timestamp: date.getTime() },
     );
   };
 
-  const openReminderPicker = () => {
+  const getNoteAnchoredDate = (): Date => {
+    const noteDate = parseDateKeyLocal(dateKey);
     const base = reminderAt || new Date();
-    if (Platform.OS === "android") {
+    return new Date(
+      noteDate.getFullYear(),
+      noteDate.getMonth(),
+      noteDate.getDate(),
+      base.getHours(),
+      base.getMinutes(),
+    );
+  };
+
+  const parseDateKeyLocal = (key: string): Date => {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
+
+  const openReminderPicker = () => {
+    const base = getNoteAnchoredDate();
+    if (Platform.OS === 'android') {
       DateTimePickerAndroid.open({
         value: base,
-        mode: "date",
-        onChange: (event, date) => {
-          if (event.type !== "set" || !date) return;
-          DateTimePickerAndroid.open({
-            value: date,
-            mode: "time",
-            onChange: (event2, time) => {
-              if (event2.type !== "set" || !time) return;
-              const combined = new Date(date);
-              combined.setHours(time.getHours(), time.getMinutes());
-              setReminderAt(combined);
-              scheduleNotification(combined, dateKey);
-            },
-          });
+        mode: 'time',
+        onChange: (event, time) => {
+          if (event.type !== 'set' || !time) return;
+          const noteDate = parseDateKeyLocal(dateKey);
+          const combined = new Date(
+            noteDate.getFullYear(),
+            noteDate.getMonth(),
+            noteDate.getDate(),
+            time.getHours(),
+            time.getMinutes(),
+          );
+          setReminderAt(combined);
+          scheduleNotification(combined, dateKey);
         },
       });
     } else {
@@ -1120,14 +1171,14 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
   };
 
   const sanitizePdfText = (text: string): string =>
-    (text || "")
-      .replace(/\r\n|\r|\n/g, " ")
-      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+    (text || '')
+      .replace(/\r\n|\r|\n/g, ' ')
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
 
   const stripControlCharsKeepNewline = (text: string): string =>
-    (text || "")
-      .replace(/\r\n|\r/g, "\n")
-      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+    (text || '')
+      .replace(/\r\n|\r/g, '\n')
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
 
   const safeEncode = (font: any, text: string): string => {
     try {
@@ -1135,15 +1186,15 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
       return text;
     } catch {
       return Array.from(text)
-        .map((ch) => {
+        .map(ch => {
           try {
             font.encodeText(ch);
             return ch;
           } catch {
-            return "?";
+            return '?';
           }
         })
-        .join("");
+        .join('');
     }
   };
 
@@ -1155,25 +1206,25 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
 
   const decoration =
     underline && strike
-      ? "underline line-through"
+      ? 'underline line-through'
       : underline
-        ? "underline"
-        : strike
-          ? "line-through"
-          : "none";
+      ? 'underline'
+      : strike
+      ? 'line-through'
+      : 'none';
 
   const fnt = {
     fontSize: FS,
     color: txtColor,
-    fontWeight: (bold ? "700" : "400") as any,
-    fontStyle: (italic ? "italic" : "normal") as any,
+    fontWeight: (bold ? '700' : '400') as any,
+    fontStyle: (italic ? 'italic' : 'normal') as any,
     textDecorationLine: decoration as any,
     textAlign: align as any,
-    fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   };
 
   const selectColor = (value: string | null) => {
-    const resolved = value === null ? (isDark ? "#FFFFFF" : "#000000") : value;
+    const resolved = value === null ? (isDark ? '#FFFFFF' : '#000000') : value;
     setTxtColor(resolved);
     setUserPickedColor(value !== null);
     applyColorChange(resolved);
@@ -1183,7 +1234,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={[S.screen, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Top bar */}
       <View style={[S.topBar, { borderBottomColor: colors.border }]}>
@@ -1192,19 +1243,19 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
             S.backBtn,
             { borderColor: colors.border, backgroundColor: colors.card },
           ]}
-          onPress={() => navigation.goBack()}
+          onPress={() => showCalendarInter(() => navigation.goBack())}
         >
           <Ionicons name="chevron-back" size={26} color={colors.primary} />
         </TouchableOpacity>
 
         <View style={S.topCenter}>
-          <Text
+          <AppText
             style={[S.dateLabel, { color: colors.text }]}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
             {dateLabel}
-          </Text>
+          </AppText>
         </View>
 
         <TouchableOpacity onPress={openLockModal} style={S.lockBtn}>
@@ -1212,18 +1263,26 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
             <Image
               source={
                 isLocked
-                  ? require("../assets/icons/padlock.png")
-                  : require("../assets/icons/unlock.png")
+                  ? isDark
+                    ? require('../assets/icons/padlock.png')
+                    : require('../assets/icons/padlocklight.png')
+                  : isDark
+                  ? require('../assets/icons/unlock.png')
+                  : require('../assets/icons/unlocklight.png')
               }
-              style={{ width: 22, height: 22, resizeMode: "contain" }}
+              style={{ width: 22, height: 22, resizeMode: 'contain' }}
             />
           </TouchableOpacity>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => setShowMenu(true)} style={S.menuBtn}>
           <Image
-            source={require("../assets/icons/more.png")}
-            style={{ width: 22, height: 22, resizeMode: "contain" }}
+            source={
+              isDark
+                ? require('../assets/icons/more.png')
+                : require('../assets/icons/morelight.png')
+            }
+            style={{ width: 22, height: 22, resizeMode: 'contain' }}
             resizeMode="contain"
           />
         </TouchableOpacity>
@@ -1232,24 +1291,24 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
           onPress={save}
           style={[S.saveFab, { backgroundColor: colors.primary }]}
         >
-          <Text style={{ color: "#fff", fontSize: 16 }}>✓</Text>
+          <AppText style={{ color: '#fff', fontSize: 16 }}>✓</AppText>
         </TouchableOpacity>
       </View>
 
       {reminderAt && (
         <TouchableOpacity style={S.reminderChip} onPress={openReminderPicker}>
-          <Text style={{ fontSize: 13, color: colors.primary }}>
+          <AppText style={{ fontSize: 13, color: colors.primary }}>
             ⏰ {formatReminder(reminderAt)}
-          </Text>
+          </AppText>
           <TouchableOpacity
             onPress={clearReminder}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text
+            <AppText
               style={{ fontSize: 14, color: colors.subText, marginLeft: 6 }}
             >
               ✕
-            </Text>
+            </AppText>
           </TouchableOpacity>
         </TouchableOpacity>
       )}
@@ -1272,9 +1331,9 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               onPress={handleSaveAsPdf}
               disabled={generatingPdf}
             >
-              <Text style={{ fontSize: 15, color: colors.text }}>
-                Save as PDF
-              </Text>
+              <AppText style={{ fontSize: 15, color: colors.text }}>
+                {t('settings.SaveasPDF')}
+              </AppText>
             </TouchableOpacity>
             <View style={[S.menuDivider, { backgroundColor: colors.border }]} />
             <TouchableOpacity
@@ -1282,7 +1341,9 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               onPress={handleSharePdf}
               disabled={generatingPdf}
             >
-              <Text style={{ fontSize: 15, color: colors.text }}>Share</Text>
+              <AppText style={{ fontSize: 15, color: colors.text }}>
+                {t('settings.Share')}
+              </AppText>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -1295,11 +1356,15 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
       >
         <View style={[S.sheet, { backgroundColor: colors.card }]}>
           <View style={S.sheetHdr}>
-            <Text style={[S.sheetTitle, { color: colors.text }]}>
-              {lockMode === "remove" ? "Remove Lock" : "Set Password"}
-            </Text>
+            <AppText style={[S.sheetTitle, { color: colors.text }]}>
+              {lockMode === 'remove'
+                ? t('settings.RemoveLock')
+                : t('settings.setPassword')}
+            </AppText>
             <TouchableOpacity onPress={() => setShowLockModal(false)}>
-              <Text style={{ fontSize: 22, color: colors.subText }}>✕</Text>
+              <AppText style={{ fontSize: 22, color: colors.subText }}>
+                ✕
+              </AppText>
             </TouchableOpacity>
           </View>
           <View style={{ paddingHorizontal: 20, gap: 12 }}>
@@ -1307,9 +1372,9 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               value={lockPwd}
               onChangeText={setLockPwd}
               placeholder={
-                lockMode === "remove"
-                  ? "Enter current password"
-                  : "New password"
+                lockMode === 'remove'
+                  ? t('settings.Entercurrentpassword')
+                  : t('settings.NewPassword')
               }
               placeholderTextColor={colors.placeholder}
               secureTextEntry
@@ -1318,11 +1383,11 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                 { borderColor: colors.border, color: colors.text },
               ]}
             />
-            {lockMode === "set" && (
+            {lockMode === 'set' && (
               <TextInput
                 value={lockPwdConfirm}
                 onChangeText={setLockPwdConfirm}
-                placeholder="Confirm password"
+                placeholder={t('settings.Confirmpassword')}
                 placeholderTextColor={colors.placeholder}
                 secureTextEntry
                 style={[
@@ -1332,9 +1397,9 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               />
             )}
             {!!lockError && (
-              <Text style={{ color: "#E53935", fontSize: 12 }}>
+              <AppText style={{ color: '#E53935', fontSize: 12 }}>
                 {lockError}
-              </Text>
+              </AppText>
             )}
           </View>
           {/* Lock confirm button — flat */}
@@ -1342,9 +1407,11 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
             onPress={confirmSetLock}
             style={[S.applyBtn, { backgroundColor: colors.primary }]}
           >
-            <Text style={S.applyTxt}>
-              {lockMode === "remove" ? "Remove Lock" : "Set Lock"}
-            </Text>
+            <AppText style={S.applyTxt}>
+              {lockMode === 'remove'
+                ? t('settings.RemoveLock')
+                : t('settings.setLock')}
+            </AppText>
           </TouchableOpacity>
         </View>
       </SheetModal>
@@ -1361,8 +1428,8 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               { backgroundColor: colors.card, borderColor: colors.border },
             ]}
           >
-            {COLOR_OPTIONS.map((opt) => {
-              const swatch = opt.value || (isDark ? "#FFFFFF" : "#000000");
+            {COLOR_OPTIONS.map(opt => {
+              const swatch = opt.value || (isDark ? '#FFFFFF' : '#000000');
               const isSelected =
                 opt.value === null
                   ? !userPickedColor
@@ -1374,9 +1441,9 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                   style={S.colorMenuItem}
                   onPress={() => selectColor(opt.value)}
                 >
-                  <Text style={[S.colorCheck, { color: colors.primary }]}>
-                    {isSelected ? "✓" : ""}
-                  </Text>
+                  <AppText style={[S.colorCheck, { color: colors.primary }]}>
+                    {isSelected ? '✓' : ''}
+                  </AppText>
                   <View
                     style={[
                       S.colorDot,
@@ -1386,9 +1453,9 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                       },
                     ]}
                   />
-                  <Text style={{ fontSize: 15, color: colors.text }}>
+                  <AppText style={{ fontSize: 15, color: colors.text }}>
                     {opt.name}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               );
             })}
@@ -1403,37 +1470,39 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
       >
         <View style={[S.sheet, { backgroundColor: colors.card }]}>
           <View style={S.sheetHdr}>
-            <Text style={[S.sheetTitle, { color: colors.text }]}>
-              Text Options
-            </Text>
+            <AppText style={[S.sheetTitle, { color: colors.text }]}>
+              {t('settings.TextOptions')}
+            </AppText>
             <TouchableOpacity onPress={() => setShowTextOptions(false)}>
-              <Text style={{ fontSize: 22, color: colors.subText }}>✕</Text>
+              <AppText style={{ fontSize: 22, color: colors.subText }}>
+                ✕
+              </AppText>
             </TouchableOpacity>
           </View>
 
           <View style={to.row}>
             {[
               {
-                label: "B",
-                style: { fontWeight: "800" as any },
+                label: 'B',
+                style: { fontWeight: '800' as any },
                 active: bold,
                 onPress: toggleBold,
               },
               {
-                label: "U",
-                style: { textDecorationLine: "underline" as any },
+                label: 'U',
+                style: { textDecorationLine: 'underline' as any },
                 active: underline,
                 onPress: toggleUnderline,
               },
               {
-                label: "I",
-                style: { fontStyle: "italic" as any },
+                label: 'I',
+                style: { fontStyle: 'italic' as any },
                 active: italic,
                 onPress: toggleItalic,
               },
               {
-                label: "S",
-                style: { textDecorationLine: "line-through" as any },
+                label: 'S',
+                style: { textDecorationLine: 'line-through' as any },
                 active: strike,
                 onPress: toggleStrike,
               },
@@ -1461,7 +1530,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
           </View>
 
           <View style={to.row}>
-            {(["left", "center", "right", "justify"] as Align[]).map((a) => (
+            {(['left', 'center', 'right', 'justify'] as Align[]).map(a => (
               <TouchableOpacity
                 key={a}
                 style={[
@@ -1477,13 +1546,13 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                     color: align === a ? colors.primary : colors.text,
                   }}
                 >
-                  {a === "left"
-                    ? "⇤≡"
-                    : a === "center"
-                      ? "≡"
-                      : a === "right"
-                        ? "≡⇥"
-                        : "☰"}
+                  {a === 'left'
+                    ? '⇤≡'
+                    : a === 'center'
+                    ? '≡'
+                    : a === 'right'
+                    ? '≡⇥'
+                    : '☰'}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -1492,15 +1561,15 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
           <View style={to.row}>
             <TouchableOpacity
               style={[to.cell, { backgroundColor: colors.border }]}
-              onPress={() => addListAtEnd("ordered")}
+              onPress={() => addListAtEnd('ordered')}
             >
               <Text style={{ fontSize: 15, color: colors.text }}>
-                1.{"\n"}2.
+                1.{'\n'}2.
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[to.cell, { backgroundColor: colors.border }]}
-              onPress={() => addListAtEnd("bullet")}
+              onPress={() => addListAtEnd('bullet')}
             >
               <Text style={{ fontSize: 22, color: colors.text }}>•≡</Text>
             </TouchableOpacity>
@@ -1518,30 +1587,32 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
       </SheetModal>
 
       {/* Reminder modal (iOS) */}
-      {Platform.OS === "ios" && (
+      {Platform.OS === 'ios' && (
         <SheetModal
           visible={showReminderModal}
           onClose={() => setShowReminderModal(false)}
         >
           <View style={[S.sheet, { backgroundColor: colors.card }]}>
             <View style={S.sheetHdr}>
-              <Text style={[S.sheetTitle, { color: colors.text }]}>
-                Set Reminder
-              </Text>
+              <AppText style={[S.sheetTitle, { color: colors.text }]}>
+                {t('settings.SetReminder')}
+              </AppText>
               <TouchableOpacity onPress={() => setShowReminderModal(false)}>
-                <Text style={{ fontSize: 22, color: colors.subText }}>✕</Text>
+                <AppText style={{ fontSize: 22, color: colors.subText }}>
+                  ✕
+                </AppText>
               </TouchableOpacity>
             </View>
             <DateTimePicker
               value={tempDate}
-              mode="datetime"
+              mode="time"
               display="spinner"
               onChange={(_, d) => d && setTempDate(d)}
-              style={{ alignSelf: "center" }}
+              style={{ alignSelf: 'center' }}
             />
             <View
               style={{
-                flexDirection: "row",
+                flexDirection: 'row',
                 gap: 10,
                 paddingHorizontal: 20,
                 marginTop: 10,
@@ -1553,13 +1624,15 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                     S.applyBtn,
                     {
                       flex: 1,
-                      backgroundColor: "#e2e2e2",
+                      backgroundColor: '#e2e2e2',
                       marginHorizontal: 0,
                     },
                   ]}
                   onPress={clearReminder}
                 >
-                  <Text style={[S.applyTxt, { color: "#333" }]}>Clear</Text>
+                  <AppText style={[S.applyTxt, { color: '#333' }]}>
+                    {t('settings.Clear')}
+                  </AppText>
                 </TouchableOpacity>
               )}
               {/* Reminder Save button — flat */}
@@ -1578,7 +1651,9 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                   setShowReminderModal(false);
                 }}
               >
-                <Text style={S.applyTxt}>Save Reminder</Text>
+                <AppText style={S.applyTxt}>
+                  {t('settings.SaveReminder')}
+                </AppText>
               </TouchableOpacity>
             </View>
           </View>
@@ -1589,12 +1664,12 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
         ref={scrollRef}
         contentContainerStyle={S.paper}
         keyboardDismissMode="interactive"
-        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         keyboardShouldPersistTaps="handled"
       >
         <View
           style={S.page}
-          onLayout={(e) => {
+          onLayout={e => {
             setPageWidth(e.nativeEvent.layout.width);
             setContentHeight(e.nativeEvent.layout.height);
           }}
@@ -1610,63 +1685,63 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
           ))}
 
           {blocks.map((block, idx) => {
-            if (block.kind === "text") {
+            if (block.kind === 'text') {
               const tb = block as TBlock;
               const frozenRuns = tb.runs.slice(0, -1);
               const activeRun = tb.runs[tb.runs.length - 1];
               const activeDecoration =
                 activeRun.underline && activeRun.strike
-                  ? "underline line-through"
+                  ? 'underline line-through'
                   : activeRun.underline
-                    ? "underline"
-                    : activeRun.strike
-                      ? "line-through"
-                      : "none";
+                  ? 'underline'
+                  : activeRun.strike
+                  ? 'line-through'
+                  : 'none';
               return (
                 <View key={block.id} style={S.runRow}>
-                  {frozenRuns.some((r) => r.text) && (
-                    <Text
+                  {frozenRuns.some(r => r.text) && (
+                    <AppText
                       style={S.frozenWrap}
                       onPress={() => {
                         setActiveTextBlockId(block.id);
                         focus(block.id, 0);
                       }}
                     >
-                      {frozenRuns.map((r) => {
+                      {frozenRuns.map(r => {
                         const rDecoration =
                           r.underline && r.strike
-                            ? "underline line-through"
+                            ? 'underline line-through'
                             : r.underline
-                              ? "underline"
-                              : r.strike
-                                ? "line-through"
-                                : "none";
+                            ? 'underline'
+                            : r.strike
+                            ? 'line-through'
+                            : 'none';
                         return r.text ? (
-                          <Text
+                          <AppText
                             key={r.id}
                             style={[
                               fnt,
                               {
                                 lineHeight: LH,
                                 color: r.color,
-                                backgroundColor: r.bg || "transparent",
+                                backgroundColor: r.bg || 'transparent',
                                 paddingHorizontal: r.bg ? 2 : 0,
-                                fontWeight: (r.bold ? "700" : "400") as any,
+                                fontWeight: (r.bold ? '700' : '400') as any,
                                 fontStyle: (r.italic
-                                  ? "italic"
-                                  : "normal") as any,
+                                  ? 'italic'
+                                  : 'normal') as any,
                                 textDecorationLine: rDecoration as any,
                               },
                             ]}
                           >
                             {r.text}
-                          </Text>
+                          </AppText>
                         ) : null;
                       })}
-                    </Text>
+                    </AppText>
                   )}
                   <TextInput
-                    ref={(r) => {
+                    ref={r => {
                       refs.current[block.id] = r;
                     }}
                     style={[
@@ -1675,28 +1750,28 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                       {
                         lineHeight: LH,
                         color: activeRun.color,
-                        backgroundColor: activeRun.bg || "transparent",
+                        backgroundColor: activeRun.bg || 'transparent',
                         paddingHorizontal: activeRun.bg ? 2 : 0,
                         width: Math.max(runWidths[block.id] || 4, 4),
-                        fontWeight: (activeRun.bold ? "700" : "400") as any,
+                        fontWeight: (activeRun.bold ? '700' : '400') as any,
                         fontStyle: (activeRun.italic
-                          ? "italic"
-                          : "normal") as any,
+                          ? 'italic'
+                          : 'normal') as any,
                         textDecorationLine: activeDecoration as any,
-                        textAlign: (activeRun.align ?? "left") as any,
+                        textAlign: (activeRun.align ?? 'left') as any,
                       },
                     ]}
                     value={activeRun.text}
-                    onContentSizeChange={(e) => {
+                    onContentSizeChange={e => {
                       const w = e?.nativeEvent?.contentSize?.width;
                       if (w == null) return;
-                      setRunWidths((prev) => ({
+                      setRunWidths(prev => ({
                         ...prev,
                         [block.id]: w,
                       }));
                     }}
-                    onChangeText={(v) => {
-                      const nlIndex = v.indexOf("\n");
+                    onChangeText={v => {
+                      const nlIndex = v.indexOf('\n');
                       if (nlIndex === -1) {
                         updateActiveRunText(block.id, v);
                         return;
@@ -1712,7 +1787,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
 
                       insertAfter(block.id, {
                         id: uid(),
-                        kind: "text",
+                        kind: 'text',
                         runs: [
                           {
                             id: uid(),
@@ -1733,11 +1808,11 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                     onSubmitEditing={() =>
                       insertAfter(block.id, {
                         id: uid(),
-                        kind: "text",
+                        kind: 'text',
                         runs: [
                           {
                             id: uid(),
-                            text: "",
+                            text: '',
                             color: txtColor,
                             bold,
                             italic,
@@ -1750,8 +1825,8 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                     }
                     onKeyPress={({ nativeEvent }) => {
                       if (
-                        nativeEvent.key === "Backspace" &&
-                        activeRun.text === ""
+                        nativeEvent.key === 'Backspace' &&
+                        activeRun.text === ''
                       ) {
                         if (tb.runs.length > 1) {
                           mergeBackIntoActiveRun(block.id);
@@ -1761,9 +1836,9 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                       }
                     }}
                     placeholder={
-                      idx === 0 && tb.runs.every((r) => r.text === "")
-                        ? "Write notes..."
-                        : ""
+                      idx === 0 && tb.runs.every(r => r.text === '')
+                        ? t('settings.Writenotes')
+                        : ''
                     }
                     placeholderTextColor={colors.placeholder}
                     textAlignVertical="top"
@@ -1775,7 +1850,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               );
             }
 
-            if (block.kind === "check")
+            if (block.kind === 'check')
               return (
                 <View key={block.id} style={S.checkRow}>
                   <TouchableOpacity
@@ -1790,7 +1865,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                           : colors.subText,
                         backgroundColor: block.checked
                           ? colors.primary
-                          : "transparent",
+                          : 'transparent',
                       },
                     ]}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 6 }}
@@ -1798,30 +1873,30 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                     {block.checked && <Text style={S.tick}>✓</Text>}
                   </TouchableOpacity>
                   <TextInput
-                    ref={(r) => {
+                    ref={r => {
                       refs.current[block.id] = r;
                     }}
                     style={[
                       S.checkInput,
                       fnt,
                       {
-                        fontWeight: (block.bold ? "700" : "400") as any,
-                        fontStyle: (block.italic ? "italic" : "normal") as any,
-                        textAlign: (block.align ?? "left") as any,
+                        fontWeight: (block.bold ? '700' : '400') as any,
+                        fontStyle: (block.italic ? 'italic' : 'normal') as any,
+                        textAlign: (block.align ?? 'left') as any,
                         textDecorationLine: block.checked
-                          ? "line-through"
+                          ? 'line-through'
                           : block.underline && block.strike
-                            ? "underline line-through"
-                            : block.underline
-                              ? "underline"
-                              : block.strike
-                                ? "line-through"
-                                : "none",
+                          ? 'underline line-through'
+                          : block.underline
+                          ? 'underline'
+                          : block.strike
+                          ? 'line-through'
+                          : 'none',
                         opacity: block.checked ? 0.5 : 1,
                       },
                     ]}
                     value={block.text}
-                    onChangeText={(t) => upd(block.id, { text: t } as any)}
+                    onChangeText={t => upd(block.id, { text: t } as any)}
                     placeholder="List item..."
                     placeholderTextColor={colors.placeholder}
                     multiline={false}
@@ -1831,8 +1906,8 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                     onSubmitEditing={() =>
                       insertAfter(block.id, {
                         id: uid(),
-                        kind: "check",
-                        text: "",
+                        kind: 'check',
+                        text: '',
                         checked: false,
                         bold,
                         italic,
@@ -1842,7 +1917,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                       })
                     }
                     onKeyPress={({ nativeEvent }) => {
-                      if (nativeEvent.key === "Backspace" && block.text === "")
+                      if (nativeEvent.key === 'Backspace' && block.text === '')
                         convertToText(block.id);
                     }}
                     includeFontPadding={false}
@@ -1853,44 +1928,44 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                     style={S.delBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 4, right: 8 }}
                   >
-                    <Text style={{ color: colors.subText, fontSize: 18 }}>
+                    <AppText style={{ color: colors.subText, fontSize: 18 }}>
                       ×
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 </View>
               );
 
-            if (block.kind === "list")
+            if (block.kind === 'list')
               return (
                 <View key={block.id} style={S.checkRow}>
-                  <Text style={[S.listMarker, { color: colors.text }]}>
-                    {block.listType === "ordered"
+                  <AppText style={[S.listMarker, { color: colors.text }]}>
+                    {block.listType === 'ordered'
                       ? `${orderedNumber(blocks, block.id)}.`
-                      : "•"}
-                  </Text>
+                      : '•'}
+                  </AppText>
                   <TextInput
-                    ref={(r) => {
+                    ref={r => {
                       refs.current[block.id] = r;
                     }}
                     style={[
                       S.checkInput,
                       fnt,
                       {
-                        fontWeight: (block.bold ? "700" : "400") as any,
-                        fontStyle: (block.italic ? "italic" : "normal") as any,
-                        textAlign: (block.align ?? "left") as any,
+                        fontWeight: (block.bold ? '700' : '400') as any,
+                        fontStyle: (block.italic ? 'italic' : 'normal') as any,
+                        textAlign: (block.align ?? 'left') as any,
                         textDecorationLine:
                           block.underline && block.strike
-                            ? "underline line-through"
+                            ? 'underline line-through'
                             : block.underline
-                              ? "underline"
-                              : block.strike
-                                ? "line-through"
-                                : "none",
+                            ? 'underline'
+                            : block.strike
+                            ? 'line-through'
+                            : 'none',
                       },
                     ]}
                     value={block.text}
-                    onChangeText={(t) => upd(block.id, { text: t } as any)}
+                    onChangeText={t => upd(block.id, { text: t } as any)}
                     placeholder="List item..."
                     placeholderTextColor={colors.placeholder}
                     multiline={false}
@@ -1900,9 +1975,9 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                     onSubmitEditing={() =>
                       insertAfter(block.id, {
                         id: uid(),
-                        kind: "list",
+                        kind: 'list',
                         listType: block.listType,
-                        text: "",
+                        text: '',
                         bold,
                         italic,
                         underline,
@@ -1911,7 +1986,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                       })
                     }
                     onKeyPress={({ nativeEvent }) => {
-                      if (nativeEvent.key === "Backspace" && block.text === "")
+                      if (nativeEvent.key === 'Backspace' && block.text === '')
                         convertToText(block.id);
                     }}
                     includeFontPadding={false}
@@ -1922,15 +1997,15 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                     style={S.delBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 4, right: 8 }}
                   >
-                    <Text style={{ color: colors.subText, fontSize: 18 }}>
+                    <AppText style={{ color: colors.subText, fontSize: 18 }}>
                       ×
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 </View>
               );
 
-            if (block.kind === "attachment") {
-              const isImage = !!block.mimeType?.startsWith("image/");
+            if (block.kind === 'attachment') {
+              const isImage = !!block.mimeType?.startsWith('image/');
               return (
                 <View key={block.id} style={S.attachRow}>
                   {isImage ? (
@@ -1951,24 +2026,24 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
                         { backgroundColor: colors.background },
                       ]}
                     >
-                      <Text style={{ fontSize: 20 }}>📄</Text>
+                      <AppText style={{ fontSize: 20 }}>📄</AppText>
                     </View>
                   )}
                   <View style={{ flex: 1 }} />
-                  <Text
+                  <AppText
                     style={[S.attachName, { color: colors.text }]}
                     numberOfLines={1}
                   >
                     {block.name}
-                  </Text>
+                  </AppText>
                   <TouchableOpacity
                     onPress={() => del(block.id)}
                     style={S.delBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 4, right: 8 }}
                   >
-                    <Text style={{ color: colors.subText, fontSize: 18 }}>
+                    <AppText style={{ color: colors.subText, fontSize: 18 }}>
                       ×
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 </View>
               );
@@ -1988,7 +2063,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
         <TouchableOpacity style={S.btn} onPress={() => setShowCP(true)}>
           <Image
             source={colorWheelIcon}
-            style={{ width: 24, height: 24, resizeMode: "contain" }}
+            style={{ width: 24, height: 24, resizeMode: 'contain' }}
           />
         </TouchableOpacity>
         <TouchableOpacity style={S.btn} onPress={() => setShowHL(true)}>
@@ -1997,7 +2072,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               width: 20,
               height: 20,
               borderRadius: 4,
-              backgroundColor: hlColor || "#FFF3B0",
+              backgroundColor: hlColor || '#FFF3B0',
               borderWidth: 1,
               borderColor: colors.border,
             }}
@@ -2013,7 +2088,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               width: 20,
               height: 20,
               tintColor: colors.subText,
-              resizeMode: "contain",
+              resizeMode: 'contain',
             }}
           />
         </TouchableOpacity>
@@ -2024,7 +2099,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               width: 20,
               height: 20,
               tintColor: colors.subText,
-              resizeMode: "contain",
+              resizeMode: 'contain',
             }}
           />
         </TouchableOpacity>
@@ -2032,7 +2107,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
           style={[
             S.btn,
             reminderAt && {
-              backgroundColor: colors.primary + "22",
+              backgroundColor: colors.primary + '22',
               borderRadius: 8,
             },
           ]}
@@ -2044,7 +2119,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               width: 20,
               height: 20,
               tintColor: reminderAt ? colors.primary : colors.subText,
-              resizeMode: "contain",
+              resizeMode: 'contain',
             }}
           />
         </TouchableOpacity>
@@ -2052,7 +2127,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
           onPress={save}
           style={[S.saveFab, { backgroundColor: colors.primary }]}
         >
-          <Text style={{ color: "#fff", fontSize: 16 }}>✓</Text>
+          <AppText style={{ color: '#fff', fontSize: 16 }}>✓</AppText>
         </TouchableOpacity>
       </View>
 
@@ -2068,31 +2143,31 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
               { backgroundColor: colors.card, borderColor: colors.border },
             ]}
           >
-            {HIGHLIGHT_OPTIONS.map((opt) => {
+            {HIGHLIGHT_OPTIONS.map(opt => {
               const isSelected =
-                (opt.value || "").toLowerCase() ===
-                (hlColor || "").toLowerCase();
+                (opt.value || '').toLowerCase() ===
+                (hlColor || '').toLowerCase();
               return (
                 <TouchableOpacity
                   key={opt.name}
                   style={S.colorMenuItem}
                   onPress={() => selectHighlight(opt.value)}
                 >
-                  <Text style={[S.colorCheck, { color: colors.primary }]}>
-                    {isSelected ? "✓" : ""}
-                  </Text>
+                  <AppText style={[S.colorCheck, { color: colors.primary }]}>
+                    {isSelected ? '✓' : ''}
+                  </AppText>
                   <View
                     style={[
                       S.colorDot,
                       {
-                        backgroundColor: opt.value || "transparent",
+                        backgroundColor: opt.value || 'transparent',
                         borderColor: colors.border,
                       },
                     ]}
                   />
-                  <Text style={{ fontSize: 15, color: colors.text }}>
+                  <AppText style={{ fontSize: 15, color: colors.text }}>
                     {opt.name}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               );
             })}
@@ -2115,7 +2190,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
             style={S.previewCloseBtn}
             onPress={() => setPreviewUri(null)}
           >
-            <Text style={{ fontSize: 26, color: "#fff" }}>✕</Text>
+            <AppText style={{ fontSize: 26, color: '#fff' }}>✕</AppText>
           </TouchableOpacity>
           {previewUri && (
             <Image
@@ -2128,64 +2203,160 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
       </Modal>
 
       {/* Unlock gate */}
-      <Modal visible={showUnlockGate} transparent={false} animationType="fade">
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+      {/* Unlock gate */}
+      <Modal
+        visible={showUnlockGate}
+        transparent={false}
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: isDark ? '#121212' : '#FAFAFA',
+          }}
         >
-          <ScrollView
-            contentContainerStyle={[
-              S.unlockGate,
-              { backgroundColor: colors.background, flexGrow: 1 },
-            ]}
-            keyboardShouldPersistTaps="handled"
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
-            <Text style={{ fontSize: 40, marginBottom: 16 }}>🔒</Text>
-            <Text
-              style={[S.sheetTitle, { color: colors.text, marginBottom: 6 }]}
-            >
-              This note is locked
-            </Text>
-            <Text
-              style={{ color: colors.subText, fontSize: 13, marginBottom: 20 }}
-            >
-              Enter password to view
-            </Text>
-            <TextInput
-              value={unlockPwd}
-              onChangeText={setUnlockPwd}
-              placeholder="Password"
-              placeholderTextColor={colors.placeholder}
-              secureTextEntry
-              style={[
-                S.lockInput,
-                { borderColor: colors.border, color: colors.text, width: 220 },
+            <ScrollView
+              contentContainerStyle={[
+                S.unlockGate,
+                {
+                  backgroundColor: isDark ? '#121212' : '#FAFAFA',
+                  flexGrow: 1,
+                },
               ]}
-            />
-            {!!unlockError && (
-              <Text style={{ color: "#E53935", fontSize: 12, marginTop: 8 }}>
-                {unlockError}
-              </Text>
-            )}
-
-            {/* Unlock button — flat */}
-            <TouchableOpacity
-              onPress={submitUnlock}
-              style={[S.unlockBtn, { backgroundColor: colors.primary }]}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text style={S.applyTxt}>Unlock</Text>
-            </TouchableOpacity>
+              {/* Icon badge */}
+              <View
+                style={[
+                  S.unlockIconBadge,
+                  {
+                    backgroundColor: isDark
+                      ? colors.primary + '30'
+                      : colors.primary + '18',
+                    borderWidth: isDark ? 1 : 0,
+                    borderColor: colors.primary + '40',
+                  },
+                ]}
+              >
+                <Image
+                  source={
+                    isDark
+                      ? require('../assets/icons/padlock.png')
+                      : require('../assets/icons/padlocklight.png')
+                  }
+                  style={{ width: 34, height: 34, resizeMode: 'contain' }}
+                />
+              </View>
 
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ marginTop: 16 }}
-            >
-              <Text style={{ color: colors.subText, fontSize: 13 }}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </KeyboardAvoidingView>
+              <AppText
+                style={[
+                  S.unlockTitle,
+                  { color: isDark ? '#F5F5F5' : '#1A1A1A' },
+                ]}
+              >
+                {t('settings.NoteLocked') || 'This note is locked'}
+              </AppText>
+              <AppText
+                style={[
+                  S.unlockSubtitle,
+                  { color: isDark ? '#AAAAAA' : '#6f6f6f' },
+                ]}
+              >
+                {t('settings.EnterPasswordToView') || 'Enter password to view'}
+              </AppText>
+
+              <View
+                style={[
+                  S.unlockInputWrap,
+                  {
+                    borderColor: unlockError
+                      ? '#E53935'
+                      : isDark
+                      ? '#2C2C2C'
+                      : '#EEEEEE',
+                    backgroundColor: isDark
+                      ? 'rgba(255,255,255,0.06)'
+                      : '#FFFFFF',
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color={isDark ? '#AAAAAA' : '#6f6f6f'}
+                  style={{ marginRight: 8 }}
+                />
+                <TextInput
+                  value={unlockPwd}
+                  onChangeText={txt => {
+                    setUnlockPwd(txt);
+                    if (unlockError) setUnlockError('');
+                  }}
+                  placeholder={t('settings.Password') || 'Password'}
+                  placeholderTextColor={isDark ? '#555555' : '#BBBBBB'}
+                  secureTextEntry
+                  autoFocus
+                  onSubmitEditing={submitUnlock}
+                  style={[
+                    S.unlockInputField,
+                    { color: isDark ? '#F5F5F5' : '#1A1A1A' },
+                  ]}
+                />
+              </View>
+
+              {!!unlockError && (
+                <View style={S.unlockErrorRow}>
+                  <Ionicons name="alert-circle" size={14} color="#E53935" />
+                  <AppText style={S.unlockErrorText}>{unlockError}</AppText>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={submitUnlock}
+                activeOpacity={0.85}
+                style={[
+                  S.unlockBtn,
+                  {
+                    backgroundColor: colors.primary,
+                    shadowOpacity: isDark ? 0.35 : 0.15,
+                    shadowColor: isDark ? colors.primary : '#000',
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="lock-open-outline"
+                  size={17}
+                  color="#fff"
+                  style={{ marginRight: 8 }}
+                />
+                <AppText style={S.applyTxt}>
+                  {t('settings.Unlock') || 'Unlock'}
+                </AppText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={{ marginTop: 18 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <AppText
+                  style={{
+                    color: isDark ? '#AAAAAA' : '#6f6f6f',
+                    fontSize: 13,
+                    fontWeight: '600',
+                  }}
+                >
+                  {t('settings.Cancel') || 'Cancel'}
+                </AppText>
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </KeyboardAvoidingView>
   );
@@ -2193,7 +2364,7 @@ export default function CalendarNoteScreen({ route, navigation }: Props) {
 
 const to = StyleSheet.create({
   row: {
-    flexDirection: "row",
+    flexDirection: 'row',
     paddingHorizontal: 20,
     marginBottom: 10,
     gap: 10,
@@ -2202,8 +2373,8 @@ const to = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cellActive: {},
   icon: { fontSize: 18 },
@@ -2215,14 +2386,59 @@ const S = StyleSheet.create({
     width: 60,
     height: 30,
     borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  saveBtnText: { color: "#fff", fontWeight: "600", fontSize: 13 },
-  applyTxt: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
+  unlockIconBadge: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  unlockTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  unlockSubtitle: {
+    fontSize: 13,
+    marginBottom: 28,
+    textAlign: 'center',
+  },
+  unlockInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 260,
+    borderWidth: 1.2,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+  },
+  unlockInputField: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 12,
+  },
+  unlockErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 10,
+  },
+  unlockErrorText: {
+    color: '#E53935',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  saveBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
+  applyTxt: { color: '#fff', fontWeight: '700', fontSize: 15 },
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 10,
     borderBottomWidth: 1,
@@ -2232,19 +2448,19 @@ const S = StyleSheet.create({
   menuBtn: {
     width: 34,
     height: 34,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  menuOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.15)" },
+  menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.15)' },
   menuBox: {
-    position: "absolute",
+    position: 'absolute',
     top: 95,
     right: 14,
     borderRadius: 12,
     borderWidth: 1,
     paddingVertical: 6,
     minWidth: 170,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -2253,30 +2469,30 @@ const S = StyleSheet.create({
   menuItem: { paddingHorizontal: 16, paddingVertical: 12 },
   menuDivider: { height: 1, marginHorizontal: 8 },
   colorMenuBox: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 84,
     left: 14,
     borderRadius: 12,
     borderWidth: 1,
     paddingVertical: 6,
     minWidth: 190,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: -4 },
     elevation: 6,
   },
   colorMenuItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   colorCheck: {
     width: 20,
     fontSize: 15,
-    fontWeight: "700",
-    textAlign: "left",
+    fontWeight: '700',
+    textAlign: 'left',
   },
   colorDot: {
     width: 16,
@@ -2288,27 +2504,27 @@ const S = StyleSheet.create({
   lockBtn: {
     width: 34,
     height: 34,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   topCenter: {
     flex: 1,
     flexShrink: 1,
     minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
   },
-  dateLabel: { fontSize: 15, fontWeight: "700", flexShrink: 1 },
+  dateLabel: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   lockInput: {
     borderWidth: 1.2,
     borderRadius: 10,
@@ -2318,65 +2534,71 @@ const S = StyleSheet.create({
   },
   unlockGate: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 20,
   },
   unlockBtn: {
-    width: 160,
-    height: 50,
+    width: 220,
+    height: 52,
     borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 26,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   applyBtn: {
     marginHorizontal: 20,
     marginTop: 8,
     paddingVertical: 13,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   reminderChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
     marginLeft: 16,
     marginTop: 8,
   },
   sheet: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingBottom: Platform.OS === "ios" ? 34 : 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
   },
   sheetHdr: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 12,
   },
-  sheetTitle: { fontSize: 17, fontWeight: "700" },
+  sheetTitle: { fontSize: 17, fontWeight: '700' },
   paper: { padding: 16, paddingTop: 8 },
   page: {
-    position: "relative",
+    position: 'relative',
     minHeight: LINE_COUNT * LH,
     paddingBottom: 100,
   },
-  rule: { position: "absolute", left: 0, right: 0 },
-  textBlock: { width: "100%", minHeight: LH, padding: 0, margin: 0 },
+  rule: { position: 'absolute', left: 0, right: 0 },
+  textBlock: { width: '100%', minHeight: LH, padding: 0, margin: 0 },
   runRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
   },
   runInput: {
     flexGrow: 1,
     flexShrink: 1,
     minWidth: 4,
-    width: "100%",
+    width: '100%',
     padding: 0,
     margin: 0,
   },
@@ -2384,8 +2606,8 @@ const S = StyleSheet.create({
     flexShrink: 1,
   },
   checkRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     height: LH,
     paddingVertical: 0,
     marginVertical: 0,
@@ -2395,79 +2617,79 @@ const S = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 8,
     flexShrink: 0,
   },
-  tick: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  tick: { color: '#fff', fontSize: 11, fontWeight: '700' },
   listMarker: {
     width: 22,
-    textAlign: "right",
+    textAlign: 'right',
     marginRight: 8,
     fontSize: FS,
     flexShrink: 0,
   },
   checkInput: { flex: 1, height: LH, padding: 0, margin: 0 },
   attachRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     minHeight: 90,
     paddingVertical: 8,
     gap: 10,
   },
   attachThumb: { width: 90, height: 90, borderRadius: 12 },
   attachIconWrap: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: '#ddd',
   },
   attachName: { flex: 1, fontSize: FS - 1 },
   previewOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.9)",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   previewCloseBtn: {
-    position: "absolute",
+    position: 'absolute',
     top: 50,
     right: 20,
     zIndex: 10,
     width: 40,
     height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  previewImage: { width: "100%", height: "80%" },
+  previewImage: { width: '100%', height: '80%' },
   delBtn: {
     width: 28,
     height: LH,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
   },
   bar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
-    paddingBottom: Platform.OS === "ios" ? 24 : 10,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
   },
   btn: {
     width: 40,
     height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   saveFab: {
     width: 35,
     height: 35,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

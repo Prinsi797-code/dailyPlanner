@@ -1,54 +1,68 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import { TEMPLATE_DESIGNS, DEFAULT_DESIGN } from '../templates/templateConfigs';
 import SectionRenderer from '../templates/SectionRenderer';
 import { adaptDesignForTheme } from '../utils/themeColorAdapter';
 import { useTheme } from '../theme/ThemeContext';
 import { SavedPlanner } from '../storage/plannerStorage';
+import AppText from '../components/AppText';
 
 export default function PlannerSnapshot({ planner }: { planner: SavedPlanner }) {
-  const { isDark } = useTheme(); // 👈 yehi missing tha
+  const { isDark } = useTheme();
 
   const rawDesign = TEMPLATE_DESIGNS[planner.templateId] || DEFAULT_DESIGN;
-  const design = adaptDesignForTheme(rawDesign, isDark); // 👈 hardcoded false ki jagah actual theme
+  const design = adaptDesignForTheme(rawDesign, isDark);
   const isScript = design.headerStyle === 'script';
   const sheetBg = design.sheetBg || '#FFFFFF';
 
-  return (
-    <View style={[styles.sheet, { backgroundColor: sheetBg }]}>
-      <View style={styles.headerBand}>
-        <Text
-          style={[
-            styles.heading,
-            {
-              color: design.headerColor,
-              fontStyle: isScript ? 'italic' : 'normal',
-              fontSize: isScript ? 32 : 24,
-              fontWeight: isScript ? '500' : '800',
-            },
-          ]}
-        >
-          {planner.templateName}
-        </Text>
-        <View style={styles.dateRow}>
-          <Text style={[styles.label, { color: design.headerColor + 'AA' }]}>
-            Date:
-          </Text>
-          <Text
+  const bgImages =
+    design.backgroundImages && design.backgroundImages.length > 0
+      ? design.backgroundImages
+      : design.backgroundImage
+      ? [design.backgroundImage]
+      : [];
+  const activeBg =
+    bgImages[(planner as any).backgroundIndex ?? 0] ?? bgImages[0];
+
+  const content = (
+    <>
+      {!design.hideHeader && (
+        <View style={styles.headerBand}>
+          <AppText
             style={[
-              styles.dateValue,
+              styles.heading,
               {
                 color: design.headerColor,
-                borderColor: design.accentColor + '80',
+                fontStyle: isScript ? 'italic' : 'normal',
+                fontSize: isScript ? 32 : 24,
+                fontWeight: isScript ? '500' : '800',
               },
             ]}
           >
-            {planner.date || ''}
-          </Text>
+            {planner.templateName}
+          </AppText>
+          <View style={styles.dateRow}>
+            <AppText style={[styles.label, { color: design.headerColor + 'AA' }]}>
+              Date:
+            </AppText>
+            <AppText
+              style={[
+                styles.dateValue,
+                {
+                  color: design.headerColor,
+                  borderColor: design.accentColor + '80',
+                },
+              ]}
+            >
+              {planner.date || ''}
+            </AppText>
+          </View>
         </View>
-      </View>
+      )}
 
-      <View style={styles.sectionsWrap}>
+      <View
+        style={[styles.sectionsWrap, design.hideHeader && { paddingTop: 28 }]}
+      >
         {design.sections.map((section: any, i: number) => (
           <SectionRenderer
             key={i}
@@ -61,7 +75,24 @@ export default function PlannerSnapshot({ planner }: { planner: SavedPlanner }) 
           />
         ))}
       </View>
-    </View>
+    </>
+  );
+
+  if (activeBg) {
+    return (
+      <ImageBackground
+        source={activeBg}
+        resizeMode="cover"
+        style={styles.sheet}
+        imageStyle={{ borderRadius: 14 }}
+      >
+        {content}
+      </ImageBackground>
+    );
+  }
+
+  return (
+    <View style={[styles.sheet, { backgroundColor: sheetBg }]}>{content}</View>
   );
 }
 

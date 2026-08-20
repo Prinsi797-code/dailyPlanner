@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { getMonthMatrix, MONTH_NAMES, DAYS_MON_START, DAYS_SUN_START } from './calendarUtils';
+import AppText from '../components/AppText';
 
 type Props = {
   startDay: 'mon' | 'sun';
@@ -38,19 +39,19 @@ export default function MonthCalendarBlock({
     <View style={[styles.wrapper, { backgroundColor: decor.border, borderColor: accentColor }]}>
       {/* Decorative top corners */}
       <View style={styles.decorRow}>
-        <Text style={styles.decorEmoji}>{decor.corner[0]}</Text>
-        <Text style={[styles.monthTitle, { color: accentColor }]}>
+        <AppText style={styles.decorEmoji}>{decor.corner[0]}</AppText>
+        <AppText style={[styles.monthTitle, { color: accentColor }]}>
           {MONTH_NAMES[month].toUpperCase()} {year}
-        </Text>
-        <Text style={styles.decorEmoji}>{decor.corner[1] || decor.corner[0]}</Text>
+        </AppText>
+        <AppText style={styles.decorEmoji}>{decor.corner[1] || decor.corner[0]}</AppText>
       </View>
 
       {/* Day labels row */}
       <View style={styles.dayLabelsRow}>
         {dayLabels.map((d) => (
-          <Text key={d} style={[styles.dayLabel, { color: colors.subText }]}>
+          <AppText key={d} style={[styles.dayLabel, { color: colors.subText }]}>
             {d.slice(0, 3)}
-          </Text>
+          </AppText>
         ))}
       </View>
 
@@ -61,7 +62,7 @@ export default function MonthCalendarBlock({
             <View key={di} style={[styles.dayCell, { borderColor: colors.border }]}>
               {day !== null && (
                 <>
-                  <Text style={[styles.dayNumber, { color: colors.text }]}>{day}</Text>
+                  <AppText style={[styles.dayNumber, { color: colors.text }]}>{day}</AppText>
                   <TextInput
                     style={[styles.dayNoteInput, { color: colors.text }]}
                     value={values[`${month}_${day}`] || ''}
@@ -78,9 +79,9 @@ export default function MonthCalendarBlock({
 
       {/* Decorative bottom corners */}
       <View style={styles.decorRow}>
-        <Text style={styles.decorEmoji}>{decor.corner[2] || decor.corner[0]}</Text>
+        <AppText style={styles.decorEmoji}>{decor.corner[2] || decor.corner[0]}</AppText>
         <View style={{ flex: 1 }} />
-        <Text style={styles.decorEmoji}>{decor.corner[3] || decor.corner[1] || decor.corner[0]}</Text>
+        <AppText style={styles.decorEmoji}>{decor.corner[3] || decor.corner[1] || decor.corner[0]}</AppText>
       </View>
     </View>
   );

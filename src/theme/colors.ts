@@ -24,13 +24,16 @@ export const ACCENT_COLORS = [
 ];
 
 export const DEFAULT_ACCENT = ACCENT_COLORS[1];
+export const DARK_BACKGROUND_IMAGE = require('../assets/img/bg.jpeg');
+export const LIGHT_BACKGROUND_IMAGE = require('../assets/img/light.jpeg');
+
 
 export const getLightColors = (primary: string) => ({
   primary,
   background: '#FAFAFA',
   card: '#FFFFFF',
   text: '#1A1A1A',
-  subText: '#888888',
+  subText: '#6f6f6f',
   border: '#EEEEEE',
   tabBar: '#FFFFFF',
   tabInactive: '#9A9A9A',
@@ -41,11 +44,11 @@ export const getLightColors = (primary: string) => ({
 export const getDarkColors = (primary: string) => ({
   primary,
   background: '#121212',
-  card: '#1E1E1E',
+  card: '#121212',
   text: '#F5F5F5',
   subText: '#AAAAAA',
   border: '#2C2C2C',
-  tabBar: '#1A1A1A',
+  tabBar: '#101010',
   tabInactive: '#777777',
   placeholder: '#555555',
   backgroundColor: '#1E1E1E',

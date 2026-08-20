@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../theme/ThemeContext';
+import AppText from '../components/AppText';
 
 type Props = StackScreenProps<RootStackParamList, 'StartOptions'>;
 
@@ -63,10 +64,10 @@ export default function StartOptionsScreen({ navigation }: Props) {
           </View>
 
           <View style={styles.textWrap}>
-            <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
-            <Text style={[styles.desc, { color: colors.subText }]} numberOfLines={2}>
+            <AppText style={[styles.title, { color: colors.text }]}>{item.title}</AppText>
+            <AppText style={[styles.desc, { color: colors.subText }]} numberOfLines={2}>
               {item.desc}
-            </Text>
+            </AppText>
           </View>
 
           <View style={[styles.arrowBox, { backgroundColor: colors.primary + '15' }]}>

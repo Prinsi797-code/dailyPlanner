@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getLightColors, getDarkColors, ThemeColors, DEFAULT_ACCENT } from './colors';
+import {
+  getLightColors,
+  getDarkColors,
+  ThemeColors,
+  DEFAULT_ACCENT,
+  DARK_BACKGROUND_IMAGE,
+  LIGHT_BACKGROUND_IMAGE, // 👈 naya
+} from './colors';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -10,6 +17,7 @@ type ThemeContextType = {
   accentColor: string;
   colors: ThemeColors;
   isDark: boolean;
+  backgroundImage: any; // 👈 naya
   setMode: (mode: ThemeMode) => void;
   setAccentColor: (color: string) => void;
 };
@@ -36,9 +44,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           if (typeof parsed === 'string') {
             setAccentColorState(parsed);
           }
-        } catch {
-          // old/invalid stored value — ignore, keep default
-        }
+        } catch {}
       }
     });
   }, []);
@@ -54,15 +60,21 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const isDark = mode === 'system' ? systemScheme === 'dark' : mode === 'dark';
-  const colors = isDark ? getDarkColors(accentColor) : getLightColors(accentColor);
+
+  const backgroundImage = isDark ? DARK_BACKGROUND_IMAGE : LIGHT_BACKGROUND_IMAGE;
+
+  const rawColors = isDark ? getDarkColors(accentColor) : getLightColors(accentColor);
+
+  const colors = backgroundImage ? { ...rawColors, background: 'transparent' } : rawColors;
 
   return (
-    <ThemeContext.Provider value={{ mode, accentColor, colors, isDark, setMode, setAccentColor }}>
+    <ThemeContext.Provider
+      value={{ mode, accentColor, colors, isDark, backgroundImage, setMode, setAccentColor }}
+    >
       {children}
     </ThemeContext.Provider>
   );
 };
-
 export const useTheme = () => {
   const ctx = useContext(ThemeContext);
   if (!ctx) throw new Error('useTheme must be used within ThemeProvider');

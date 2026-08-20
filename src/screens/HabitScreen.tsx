@@ -1,5 +1,11 @@
 // src/screens/HebitScreen.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from 'react';
 import {
   View,
   Text,
@@ -11,42 +17,49 @@ import {
   NativeScrollEvent,
   Image,
   StatusBar,
+  Animated,
   SafeAreaView,
-} from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useTheme } from "../theme/ThemeContext";
-import { useNavigation } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "../navigation/types";
+  Platform,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../theme/ThemeContext';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation/types';
 import CreateReminderModal, {
   NewReminderData,
-} from "../components/CreateReminderModal";
+} from '../components/CreateReminderModal';
+import AppText from '../components/AppText';
+import { useTranslation } from 'react-i18next';
+import { getAllMoods, MoodEntry } from '../storage/moodStorage';
+import { MOODS } from '../constants/moods';
+import notifee, { TriggerType, AndroidImportance } from '@notifee/react-native';
 
 type Nav = StackNavigationProp<RootStackParamList>;
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 const MONTH_LABELS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
+const SCREEN_WIDTH = Dimensions.get('window').width;
 const DAY_WIDTH = SCREEN_WIDTH / 7;
 
 const CIRCLE_SIZE = DAY_WIDTH - 20;
 const ROW_MARGIN_TOP = 6;
 const WEEK_ROW_HEIGHT = CIRCLE_SIZE + ROW_MARGIN_TOP;
 
-const REMINDERS_STORAGE_KEY = "@planwiz_reminders";
+const REMINDERS_STORAGE_KEY = '@planwiz_reminders';
 
 function addDays(date: Date, days: number) {
   const d = new Date(date);
@@ -69,17 +82,85 @@ function isSameDay(a: Date, b: Date) {
 }
 
 function dateKey(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate(),
-  ).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    '0',
+  )}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+function parseDateKeyLocal(key: string): Date {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+const ensureReminderChannel = async () => {
+  if (Platform.OS === 'android') {
+    await notifee.createChannel({
+      id: 'reminders_v2',
+      name: 'Reminders',
+      importance: AndroidImportance.HIGH,
+      sound: 'default',
+    });
+  }
+};
+
+function combineDateAndTime(dateStr: string, timeStr?: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const result = new Date(year, month - 1, day, 9, 0, 0);
+
+  if (timeStr) {
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const isPM = /PM/i.test(match[3]);
+      if (isPM && hours !== 12) hours += 12;
+      if (!isPM && hours === 12) hours = 0;
+      result.setHours(hours, minutes, 0, 0);
+    }
+  }
+  return result;
+}
+
+const scheduleReminderNotification = async (reminder: {
+  id: string;
+  title: string;
+  date: string;
+  time?: string;
+}) => {
+  await notifee.requestPermission();
+  await ensureReminderChannel();
+  await notifee.cancelNotification(reminder.id);
+
+  const fireDate = combineDateAndTime(reminder.date, reminder.time);
+  if (fireDate.getTime() <= Date.now()) return;
+
+  await notifee.createTriggerNotification(
+    {
+      id: reminder.id,
+      title: 'Daily Planner Reminder',
+      body: reminder.title,
+      android: {
+        channelId: 'reminders_v2',
+        pressAction: { id: 'default' },
+        sound: 'default',
+      },
+      ios: { sound: 'default' },
+    },
+    { type: TriggerType.TIMESTAMP, timestamp: fireDate.getTime() },
+  );
+};
+
+const cancelReminderNotification = async (id: string) => {
+  await notifee.cancelNotification(id);
+};
 
 export interface Reminder {
   id: string;
   title: string;
   time?: string;
   done?: boolean;
-  date: string; // 'YYYY-MM-DD'
+  date: string;
   color?: string;
 }
 
@@ -106,7 +187,7 @@ function WeekRow({
 }) {
   return (
     <View style={styles.weekDatesRow}>
-      {weekDates.map((d) => {
+      {weekDates.map(d => {
         const selected = isSameDay(d, selectedDate);
         const hasReminders = datesWithReminders.has(dateKey(d));
         return (
@@ -116,46 +197,31 @@ function WeekRow({
                 onPress={() => onSelect(d)}
                 style={[styles.dateCircle, { backgroundColor: primaryColor }]}
               >
-                <Text style={[styles.dateText, { color: "#fff" }]}>
+                <AppText style={[styles.dateText, { color: '#fff' }]}>
                   {d.getDate()}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
                 onPress={() => onSelect(d)}
                 style={styles.dateCircle}
               >
-                <Text style={[styles.dateText, { color: textColor }]}>
+                <AppText style={[styles.dateText, { color: textColor }]}>
                   {d.getDate()}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             )}
             <View
               style={[
                 styles.dateDot,
                 {
-                  backgroundColor: hasReminders ? primaryColor : "transparent",
+                  backgroundColor: hasReminders ? primaryColor : 'transparent',
                 },
               ]}
             />
           </View>
         );
       })}
-    </View>
-  );
-}
-
-function EmptyState({ colors }: { colors: any }) {
-  return (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyEmoji}>🔔</Text>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        Achieve More with Reminders!
-      </Text>
-      <Text style={[styles.emptySub, { color: colors.subText }]}>
-        Tap the '+' button to add reminders and{"\n"}manage your day
-        efficiently.
-      </Text>
     </View>
   );
 }
@@ -168,11 +234,12 @@ export default function HebitScreen({
   const { colors, isDark } = useTheme();
   const navigation = useNavigation<Nav>();
   const primary = (colors as any).primary ?? (colors as any).accent;
-
+  const { t } = useTranslation();
   const today = useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = useState(today);
   const [baseDate, setBaseDate] = useState(today);
   const [allReminders, setAllReminders] = useState<Reminder[]>([]);
+  const [moodsByDate, setMoodsByDate] = useState<Record<string, string>>({}); // 👈 ye add karo
   const [loaded, setLoaded] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
@@ -180,7 +247,63 @@ export default function HebitScreen({
   const scrollRef = useRef<ScrollView>(null);
   const isJumping = useRef(false);
 
-  // Load reminders from AsyncStorage on mount
+  const DAY_LABELS = [
+    t('settings.Sun'),
+    t('settings.Mon'),
+    t('settings.Tue'),
+    t('settings.Wed'),
+    t('settings.Thu'),
+    t('settings.Fri'),
+    t('settings.Sat'),
+  ];
+  const MONTH_LABELS = [
+    t('settings.Jan'),
+    t('settings.Feb'),
+    t('settings.Mar'),
+    t('settings.Apr'),
+    t('settings.May'),
+    t('settings.Jun'),
+    t('settings.Jul'),
+    t('settings.Aug'),
+    t('settings.Sep'),
+    t('settings.Oct'),
+    t('settings.Nov'),
+    t('settings.Dec'),
+  ];
+  const proScale = useRef(new Animated.Value(1)).current;
+
+  function EmptyState({ colors }: { colors: any }) {
+    return (
+      <View style={styles.emptyState}>
+        <AppText style={[styles.emptyTitle, { color: colors.text }]}>
+          {t('settings.AchieveReminders')}
+        </AppText>
+        <AppText style={[styles.emptySub, { color: colors.subText }]}>
+          {t('settings.achievedetail')}
+        </AppText>
+      </View>
+    );
+  }
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(proScale, {
+          toValue: 1.15,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(proScale, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [proScale]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -189,20 +312,29 @@ export default function HebitScreen({
           setAllReminders(JSON.parse(stored));
         }
       } catch (e) {
-        console.error("Failed to load reminders", e);
+        console.error('Failed to load reminders', e);
       } finally {
         setLoaded(true);
       }
     })();
   }, []);
 
-  // Persist reminders to AsyncStorage whenever they change (after initial load)
+  useFocusEffect(
+    useCallback(() => {
+      getAllMoods().then((all: MoodEntry[]) => {
+        const map: Record<string, string> = {};
+        all.forEach(m => (map[m.date] = m.moodId));
+        setMoodsByDate(map);
+      });
+    }, []),
+  );
+
   useEffect(() => {
     if (!loaded) return;
     AsyncStorage.setItem(
       REMINDERS_STORAGE_KEY,
       JSON.stringify(allReminders),
-    ).catch((e) => console.error("Failed to save reminders", e));
+    ).catch(e => console.error('Failed to save reminders', e));
   }, [allReminders, loaded]);
 
   const weeks = useMemo(
@@ -215,12 +347,12 @@ export default function HebitScreen({
   );
 
   const datesWithReminders = useMemo(
-    () => new Set(allReminders.map((r) => r.date)),
+    () => new Set(allReminders.map(r => r.date)),
     [allReminders],
   );
 
   const reminders = useMemo(
-    () => allReminders.filter((r) => r.date === dateKey(selectedDate)),
+    () => allReminders.filter(r => r.date === dateKey(selectedDate)),
     [allReminders, selectedDate],
   );
 
@@ -231,17 +363,24 @@ export default function HebitScreen({
     return () => clearTimeout(t);
   }, [baseDate]);
 
+  useEffect(() => {
+    notifee.requestPermission();
+    ensureReminderChannel();
+  }, []);
+
   const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (isJumping.current) return;
     const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
     if (page === 0) {
-      setBaseDate((prev) => addDays(prev, -7));
+      setBaseDate(prev => addDays(prev, -7));
     } else if (page === 2) {
-      setBaseDate((prev) => addDays(prev, 7));
+      setBaseDate(prev => addDays(prev, 7));
     }
   };
 
-  const dateLabel = `${MONTH_LABELS[selectedDate.getMonth()]} ${selectedDate.getDate()}, ${selectedDate.getFullYear()}`;
+  const dateLabel = `${
+    MONTH_LABELS[selectedDate.getMonth()]
+  } ${selectedDate.getDate()}, ${selectedDate.getFullYear()}`;
 
   const goToToday = () => {
     const now = new Date();
@@ -250,82 +389,110 @@ export default function HebitScreen({
   };
 
   const handleSaveReminder = (data: NewReminderData, editingId?: string) => {
+    const time = data.time
+      ? data.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : undefined;
+    const dKey = dateKey(data.date);
+
     if (editingId) {
-      setAllReminders((prev) =>
-        prev.map((r) =>
+      setAllReminders(prev =>
+        prev.map(r =>
           r.id === editingId
-            ? {
-                ...r,
-                title: data.title,
-                color: data.color,
-                date: dateKey(data.date),
-                time: data.time
-                  ? data.time.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : undefined,
-              }
+            ? { ...r, title: data.title, color: data.color, date: dKey, time }
             : r,
         ),
       );
-    } else {
-      const newReminder: Reminder = {
-        id: Date.now().toString(),
+      scheduleReminderNotification({
+        id: editingId,
         title: data.title,
-        time: data.time
-          ? data.time.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : undefined,
-        date: dateKey(data.date),
+        date: dKey,
+        time,
+      });
+    } else {
+      const newId = Date.now().toString();
+      const newReminder: Reminder = {
+        id: newId,
+        title: data.title,
+        time,
+        date: dKey,
         color: data.color,
         done: false,
       };
-      setAllReminders((prev) => [...prev, newReminder]);
+      setAllReminders(prev => [...prev, newReminder]);
+      scheduleReminderNotification({
+        id: newId,
+        title: data.title,
+        date: dKey,
+        time,
+      });
     }
   };
 
   const handleDeleteReminder = (id: string) => {
-    setAllReminders((prev) => prev.filter((r) => r.id !== id));
+    setAllReminders(prev => prev.filter(r => r.id !== id));
+    cancelReminderNotification(id);
   };
+
   const toggleReminderDone = (id: string) => {
-    setAllReminders((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, done: !r.done } : r)),
+    setAllReminders(prev =>
+      prev.map(r => (r.id === id ? { ...r, done: !r.done } : r)),
     );
+    const reminder = allReminders.find(r => r.id === id);
+    if (reminder && !reminder.done) {
+      cancelReminderNotification(id);
+    }
   };
 
   return (
     <>
       <StatusBar
         backgroundColor={colors.background}
-        barStyle={isDark ? "light-content" : "dark-content"}
+        barStyle={isDark ? 'light-content' : 'dark-content'}
       />
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.card }}>
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <View style={[styles.main, { backgroundColor: colors.card }]}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View
+          style={[styles.container, { backgroundColor: colors.background }]}
+        >
+          <View style={[styles.main]}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={[styles.logo, { color: colors.text }]}>
-                Plan<Text style={{ color: primary }}>Wiz</Text>
-              </Text>
+              <AppText style={[styles.logo, { color: colors.text }]}>
+                Daily<AppText style={{ color: primary }}> Planner</AppText>
+              </AppText>
               <View style={styles.headerIcons}>
-                <View style={[styles.proBadge, { borderColor: primary }]}>
-                  <Text style={{ fontSize: 11 }}>💎</Text>
-                  <Text style={[styles.proText, { color: primary }]}>PRO</Text>
-                </View>
+                <Animated.View
+                  style={[
+                    styles.proBadge,
+                    {
+                      borderColor: colors.primary,
+                      backgroundColor: colors.primary,
+                      transform: [{ scale: proScale }],
+                    },
+                  ]}
+                >
+                  {/* <AppText style={[styles.proText, { color: colors.text }]}>
+                    {t('PRO')}
+                  </AppText> */}
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => navigation.navigate('Premium' as never)}
+                  >
+                    <AppText style={[styles.proText, { color: colors.text }]}>
+                      PRO
+                    </AppText>
+                  </TouchableOpacity>
+                </Animated.View>
                 <TouchableOpacity
                   style={styles.iconBtn}
-                  onPress={() => navigation.navigate("Favorites")}
+                  onPress={() => navigation.navigate('Favorites')}
                 >
                   <Image
-                    source={require("../assets/icons/heart.png")}
+                    source={require('../assets/icons/heart.png')}
                     style={{
                       width: 20,
                       height: 20,
                       tintColor: colors.subText,
-                      resizeMode: "contain",
+                      resizeMode: 'contain',
                     }}
                   />
                 </TouchableOpacity>
@@ -333,13 +500,13 @@ export default function HebitScreen({
             </View>
 
             <View style={styles.weekLabelsRow}>
-              {DAY_LABELS.map((label) => (
-                <Text
+              {DAY_LABELS.map(label => (
+                <AppText
                   key={label}
                   style={[styles.dayLabel, { color: colors.subText }]}
                 >
                   {label}
-                </Text>
+                </AppText>
               ))}
             </View>
 
@@ -374,6 +541,7 @@ export default function HebitScreen({
                       primaryColor={primary}
                       textColor={colors.text}
                       datesWithReminders={datesWithReminders}
+                      moodsByDate={moodsByDate}
                     />
                   </View>
                 ))}
@@ -386,12 +554,14 @@ export default function HebitScreen({
                 style={[styles.todayPillWrap, { backgroundColor: primary }]}
               >
                 <View style={styles.todayPill}>
-                  <Text style={styles.todayPillText}>‹ Today</Text>
+                  <AppText style={styles.todayPillText}>
+                    ‹ {t('settings.Today')}
+                  </AppText>
                 </View>
               </TouchableOpacity>
-              <Text style={[styles.dateTitle, { color: colors.text }]}>
+              <AppText style={[styles.dateTitle, { color: colors.text }]}>
                 {dateLabel}
-              </Text>
+              </AppText>
               <View style={{ width: 70 }} />
             </View>
           </View>
@@ -405,7 +575,7 @@ export default function HebitScreen({
             {reminders.length === 0 ? (
               <EmptyState colors={colors} />
             ) : (
-              reminders.map((r) => (
+              reminders.map(r => (
                 <TouchableOpacity
                   key={r.id}
                   activeOpacity={0.7}
@@ -415,7 +585,7 @@ export default function HebitScreen({
                   }}
                   style={[
                     styles.reminderRow,
-                    { backgroundColor: (r.color ?? primary) + "30" },
+                    { backgroundColor: (r.color ?? primary) + '30' },
                   ]}
                 >
                   <TouchableOpacity
@@ -425,7 +595,7 @@ export default function HebitScreen({
                       r.done && { backgroundColor: r.color ?? primary },
                     ]}
                   />
-                  <Text
+                  <AppText
                     style={[
                       styles.reminderText,
                       { color: colors.text },
@@ -433,13 +603,13 @@ export default function HebitScreen({
                     ]}
                   >
                     {r.title}
-                  </Text>
+                  </AppText>
                   {r.time && (
-                    <Text
+                    <AppText
                       style={[styles.reminderTime, { color: colors.subText }]}
                     >
                       {r.time}
-                    </Text>
+                    </AppText>
                   )}
                 </TouchableOpacity>
               ))
@@ -473,13 +643,13 @@ export default function HebitScreen({
                     id: editingReminder.id,
                     title: editingReminder.title,
                     color: editingReminder.color ?? primary,
-                    date: new Date(editingReminder.date),
+                    date: parseDateKeyLocal(editingReminder.date),
                     time: editingReminder.time
                       ? (() => {
                           const t = new Date();
                           const [h, m] = editingReminder
-                            .time!.replace(/\s*(AM|PM)/i, "")
-                            .split(":")
+                            .time!.replace(/\s*(AM|PM)/i, '')
+                            .split(':')
                             .map(Number);
                           const isPM = /PM/i.test(editingReminder.time!);
                           t.setHours(isPM && h !== 12 ? h + 12 : h, m, 0, 0);
@@ -497,17 +667,17 @@ export default function HebitScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, },
+  container: { flex: 1 },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 18,
     paddingTop: 0,
     paddingBottom: 20,
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -516,19 +686,20 @@ const styles = StyleSheet.create({
   main: {
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
-    overflow: "hidden",
-    shadowColor: "#000",
+    overflow: 'hidden',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 6,
     paddingBottom: 15,
   },
-  logo: { fontSize: 20, fontWeight: "800" },
-  headerIcons: { flexDirection: "row", alignItems: "center", gap: 4 },
+  moodDotEmoji: { fontSize: 11, marginTop: 4 },
+  logo: { fontSize: 20, fontWeight: '800' },
+  headerIcons: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   proBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 8,
@@ -536,34 +707,34 @@ const styles = StyleSheet.create({
     gap: 3,
     marginRight: 6,
   },
-  proText: { fontSize: 10, fontWeight: "700" },
+  proText: { fontSize: 12, fontWeight: '700' },
   iconBtn: { padding: 6 },
 
   weekLabelsRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     marginTop: 18,
     paddingHorizontal: 4,
   },
   dayLabel: {
     width: DAY_WIDTH,
-    textAlign: "center",
+    textAlign: 'center',
     fontSize: 13,
   },
   weekDatesRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     marginTop: ROW_MARGIN_TOP,
     paddingHorizontal: 4,
   },
   dateCol: {
     width: DAY_WIDTH,
-    alignItems: "center",
+    alignItems: 'center',
   },
   dateCircle: {
     width: CIRCLE_SIZE,
     height: CIRCLE_SIZE,
     borderRadius: CIRCLE_SIZE / 2,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dateDot: {
     width: 5,
@@ -571,40 +742,40 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
     marginTop: 4,
   },
-  dateText: { fontSize: 16, fontWeight: "600" },
+  dateText: { fontSize: 16, fontWeight: '600' },
 
   todayRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 16,
     paddingHorizontal: 16,
   },
-  todayPillWrap: { borderRadius: 8, overflow: "hidden" },
+  todayPillWrap: { borderRadius: 8, overflow: 'hidden' },
   todayPill: {
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 8,
   },
-  todayPillText: { color: "#fff", fontWeight: "600" },
-  dateTitle: { fontSize: 15, fontWeight: "600" },
+  todayPillText: { color: '#fff', fontWeight: '600' },
+  dateTitle: { fontSize: 15, fontWeight: '600' },
 
   body: { flex: 1, marginTop: 8 },
-  emptyBodyContent: { flex: 1, justifyContent: "center" },
+  emptyBodyContent: { flex: 1, justifyContent: 'center' },
 
-  emptyState: { alignItems: "center", paddingHorizontal: 32 },
+  emptyState: { alignItems: 'center', paddingHorizontal: 32 },
   emptyEmoji: { fontSize: 40, marginBottom: 16 },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
+    fontWeight: '700',
+    textAlign: 'center',
     marginBottom: 10,
   },
-  emptySub: { fontSize: 14, textAlign: "center", lineHeight: 20 },
+  emptySub: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 
   reminderRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 16,
     marginVertical: 6,
     padding: 12,
@@ -615,27 +786,27 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: "#999",
+    borderColor: '#999',
     marginRight: 10,
   },
   reminderText: { flex: 1, fontSize: 15 },
-  reminderDone: { textDecorationLine: "line-through", opacity: 0.5 },
+  reminderDone: { textDecorationLine: 'line-through', opacity: 0.5 },
   reminderTime: { fontSize: 12 },
 
   usageText: {
-    textAlign: "center",
+    textAlign: 'center',
     fontSize: 13,
     marginTop: 6,
     marginBottom: 4,
   },
 
   fabWrap: {
-    position: "absolute",
+    position: 'absolute',
     right: 20,
     bottom: 90,
     borderRadius: 16,
     elevation: 6,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOpacity: 0.3,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
@@ -644,8 +815,8 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  fabText: { color: "#fff", fontSize: 28, lineHeight: 28, fontWeight: "400" },
+  fabText: { color: '#fff', fontSize: 40, lineHeight: 40, fontWeight: '400' },
 });

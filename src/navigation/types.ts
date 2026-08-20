@@ -3,10 +3,15 @@ export type Template = {
   name: string;
   type: string;
   image?: any;
+  requiresPhotos?: boolean; 
+  photoSlots?: number;  
+  userPhotos?: string[];  
 };
 
 export type RootStackParamList = {
+  Splash: undefined;
   MainTabs: undefined;
+  Language: { isFirstLaunch?: boolean } | undefined;
   StartOptions: undefined;
   Theme: undefined;
   Settings: undefined;
@@ -16,6 +21,11 @@ export type RootStackParamList = {
   LayoutDaysOrder: undefined;
   LineType: undefined;
   Favorites: undefined;
+  FontFamily: undefined;
+  // Language: undefined;
+  MoodHome: undefined;
+  MoodCalendar: undefined;
+  Mood: { dateKey: string; dateLabel: string };
 };
 
 export type TabParamList = {

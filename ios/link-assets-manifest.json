@@ -1,0 +1,45 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "src/assets/font/ArianaVioleta.ttf",
+      "sha1": "624ec214d545b06e8483a00be7eb62415037f0c9"
+    },
+    {
+      "path": "src/assets/font/BeckyTahlia.ttf",
+      "sha1": "3909ec0710605c629405a1e188560b7cde7ded19"
+    },
+    {
+      "path": "src/assets/font/BelieveIt.ttf",
+      "sha1": "5c63a5c0f0235d1a6bbe24ee0fab5a2fdfd3e4a5"
+    },
+    {
+      "path": "src/assets/font/Branda.ttf",
+      "sha1": "ec11234fa6473835d0c0b2290e43822a619afc2a"
+    },
+    {
+      "path": "src/assets/font/ChrustyRock.ttf",
+      "sha1": "e642b90ddfaf9b85cc3f5f3ff9a0982d1cad1f65"
+    },
+    {
+      "path": "src/assets/font/CookieCrisp.ttf",
+      "sha1": "1cd9bd31f3a8009b312c75d1f168c6cc7c1e55bc"
+    },
+    {
+      "path": "src/assets/font/Debrosee.ttf",
+      "sha1": "4a876c7ba236eeb2e93ad09e1949da1bae6c0fd8"
+    },
+    {
+      "path": "src/assets/font/HappySwirly.ttf",
+      "sha1": "22c808093cd96bff782726c749cb56b5ce28a3a2"
+    },
+    {
+      "path": "src/assets/font/LoveDays.ttf",
+      "sha1": "e25b176603d5d2b7ef84e8b3c610485d2e6f3e6e"
+    },
+    {
+      "path": "src/assets/font/RoughenCornerRegular.ttf",
+      "sha1": "20ddf1950f326c9cf4be6aee16a0a393bb826466"
+    }
+  ]
+}
